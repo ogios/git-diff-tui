@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title></title>
+    <!-- <link href="css/style.css" rel="stylesheet" /> -->
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="wrapper"></div>
+
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <script>
+      const DATA = 'data-replace'
+      new gridjs.Grid({
+        columns: ['name', 'hash', 'comment'],
+        data: DATA,
+      }).render(document.getElementById('wrapper'))
+    </script>
+  </body>
+</html>
