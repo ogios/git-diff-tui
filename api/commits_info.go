@@ -71,11 +71,29 @@ func GetCommits(hashes *[2]string) ([]Commit, error) {
 	return cs, nil
 }
 
-// func GetCommitsBetween(hash1, hash2 string) ([]string, error) {
-// 	cmd := exec.Command("git", "log", "--pretty=format:%h", hash1+".."+hash2)
-// 	o, err := cmd.Output()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return strings.Split(string(o), "\n"), nil
-// }
+func GetCurrentBranch() (string, error) {
+	cmd := exec.Command("git", "show-ref", "--tags")
+	o, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(o), nil
+}
+
+func GetReflogCommit() ([]string, error) {
+	bn, err := GetCurrentBranch()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("git", "reflog", bn)
+	o, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	rows := strings.Split(string(o), "\n")
+	cs := make([]string, len(rows))
+	for i, v := range rows {
+		cs[i] = strings.Split(v, " ")[0]
+	}
+	return cs, nil
+}

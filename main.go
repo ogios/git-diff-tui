@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ogios/merge-repo/api"
+	"github.com/ogios/merge-repo/config"
 	"github.com/ogios/merge-repo/template"
 	ui "github.com/ogios/merge-repo/ui/main"
 )
@@ -18,28 +19,30 @@ func main() {
 	start := time.Now().UnixMilli()
 
 	// args
-	h1 := os.Args[1]
-	h2 := os.Args[2]
-	reg := func() string {
-		if len(os.Args) >= 4 {
-			return os.Args[3]
-		}
-		return ""
-	}()
+	config.ParseArgs()
+	hashes := &[2]string{
+		config.GlobalConfig.Hash1, config.GlobalConfig.Hash2,
+	}
+	// h1 := os.Args[1]
+	// h2 := os.Args[2]
+	// reg := func() string {
+	// 	if len(os.Args) >= 4 {
+	// 		return os.Args[3]
+	// 	}
+	// 	return ""
+	// }()
 
 	// commits
-	cs, err := api.GetCommits(&[2]string{
-		h1, h2,
-	})
+	cs, err := api.GetCommits(hashes)
 	if err != nil {
 		panic(err)
 	}
 	COMMITS = cs
 
 	// operations
-	diffFileInfo(reg)
+	diffFileInfo(config.GlobalConfig.Regex)
 	if len(os.Args) >= 5 && os.Args[4] == "-n" {
-		noui(h1, h2, reg)
+		noui(hashes[0], hashes[1], config.GlobalConfig.Regex)
 		return
 	}
 	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
