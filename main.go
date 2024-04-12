@@ -38,6 +38,8 @@ func main() {
 		panic(err)
 	}
 	COMMITS = cs
+	// fmt.Println(cs)
+	log.Println(cs)
 
 	// operations
 	diffFileInfo(config.GlobalConfig.Regex)

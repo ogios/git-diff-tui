@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 )
@@ -74,8 +73,7 @@ func CopyFiles(fs []string, from, to string) {
 		}
 	}
 
-	tree := exec.Command("tree", to)
-	res, err := tree.Output()
+	res, err := ExecCmd("tree", to)
 	if err != nil {
 		return
 	}

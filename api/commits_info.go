@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -22,29 +21,28 @@ func parseCommits(raw string) Commit {
 
 func GetCommitLog(hashes *[2]string) ([]string, error) {
 	args := []string{
+		"git",
 		"log",
 		"--pretty=format:%h%n%an%n%ci%n%s%n",
 	}
 	if hashes != nil {
 		args = append(args, hashes[0]+".."+hashes[1])
 	}
-	cmd := exec.Command("git", args...)
-	o, err := cmd.Output()
+	o, err := ExecCmd(args...)
 	if err != nil {
 		return nil, fmt.Errorf("git log error: %v", err)
 	}
-	rcs := strings.Split(strings.TrimSpace(string(o)), "\n\n")
+	rcs := strings.Split(strings.TrimSpace(o), "\n\n")
 	return rcs, nil
 }
 
 func GetTags() map[string]string {
-	cmd := exec.Command("git", "show-ref", "--tags")
-	o, err := cmd.Output()
+	o, err := ExecCmd("git", "show-ref", "--tags")
 	m := make(map[string]string)
 	if err != nil {
 		return m
 	}
-	rt := strings.Split(strings.TrimSpace(string(o)), "\n")
+	rt := strings.Split(strings.TrimSpace(o), "\n")
 	for _, v := range rt {
 		ct := strings.Split(v, " ")
 		m[ct[0][:7]] = strings.Replace(ct[1], "refs/tags/", "", 1)
@@ -72,12 +70,11 @@ func GetCommits(hashes *[2]string) ([]Commit, error) {
 }
 
 func GetCurrentBranch() (string, error) {
-	cmd := exec.Command("git", "show-ref", "--tags")
-	o, err := cmd.Output()
+	o, err := ExecCmd("git", "branch", "--show-current")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get current branch error: %v", err)
 	}
-	return string(o), nil
+	return strings.TrimSpace(o), nil
 }
 
 func GetReflogCommit() ([]string, error) {
@@ -85,12 +82,12 @@ func GetReflogCommit() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command("git", "reflog", bn)
-	o, err := cmd.Output()
+	o, err := ExecCmd("git", "reflog", bn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reflog error: %v", err)
 	}
-	rows := strings.Split(string(o), "\n")
+
+	rows := strings.Split(strings.TrimSpace(string(o)), "\n")
 	cs := make([]string, len(rows))
 	for i, v := range rows {
 		cs[i] = strings.Split(v, " ")[0]

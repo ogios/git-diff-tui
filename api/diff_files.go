@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -23,10 +22,9 @@ func GetDiffFiles(hashes ...string) ([]string, error) {
 		"--name-only",
 	}
 	args = append(args, hashes...)
-	res := exec.Command(args[0], args[1:]...)
-	out, err := res.Output()
+	out, err := ExecCmd(args...)
 	if err != nil {
-		panic(fmt.Errorf("git diff error: %v", err))
+		return nil, fmt.Errorf("git diff error: %v", err)
 	}
 	return strings.Split(string(out), "\n"), nil
 }

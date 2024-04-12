@@ -40,6 +40,7 @@ func ParseArgs() {
 		}
 		i++
 	}
+
 	if (GlobalConfig.Hash1 == "") || (GlobalConfig.Hash2 == "") {
 		useRefLog()
 	}
