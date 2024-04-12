@@ -26,5 +26,5 @@ func GetDiffFiles(hashes ...string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("git diff error: %v", err)
 	}
-	return strings.Split(string(out), "\n"), nil
+	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
 }

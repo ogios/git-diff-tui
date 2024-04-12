@@ -53,14 +53,17 @@ func main() {
 // 生成diff表格
 func diffFileInfo(reg string) {
 	m := map[string][]api.Commit{}
-	for _, c := range COMMITS {
-		fs, err := api.GetDiffFiles(c.Hash)
+	for i := 0; i < len(COMMITS)-1; i++ {
+		old := COMMITS[i]
+		change := COMMITS[i+1]
+		fs, err := api.GetDiffFiles(old.Hash, change.Hash)
+		log.Println(fs)
 		fs = api.MatchRegex(fs, reg)
 		if err != nil {
 			panic(err)
 		}
 		for _, f := range fs {
-			m[f] = append(m[f], c)
+			m[f] = append(m[f], change)
 		}
 	}
 

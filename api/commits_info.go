@@ -20,17 +20,33 @@ func parseCommits(raw string) Commit {
 }
 
 func GetCommitLog(hashes *[2]string) ([]string, error) {
-	args := []string{
+	baseArgs := []string{
 		"git",
 		"log",
 		"--pretty=format:%h%n%an%n%ci%n%s%n",
 	}
+	var o string
 	if hashes != nil {
-		args = append(args, hashes[0]+".."+hashes[1])
-	}
-	o, err := ExecCmd(args...)
-	if err != nil {
-		return nil, fmt.Errorf("git log error: %v", err)
+		args := make([]string, len(baseArgs)+1)
+		copy(args, baseArgs)
+		args[len(args)-1] = hashes[0]
+		r, err := ExecCmd(args...)
+		if err != nil {
+			return nil, fmt.Errorf("git log error: %v", err)
+		}
+		o += r + "\n"
+		args[len(args)-1] = hashes[0] + ".." + hashes[1]
+		r, err = ExecCmd(args...)
+		if err != nil {
+			return nil, fmt.Errorf("git log error: %v", err)
+		}
+		o += r
+	} else {
+		r, err := ExecCmd(baseArgs...)
+		if err != nil {
+			return nil, fmt.Errorf("git log error: %v", err)
+		}
+		o = r
 	}
 	rcs := strings.Split(strings.TrimSpace(o), "\n\n")
 	return rcs, nil
