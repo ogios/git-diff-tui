@@ -23,14 +23,6 @@ func main() {
 	hashes := &[2]string{
 		config.GlobalConfig.Hash1, config.GlobalConfig.Hash2,
 	}
-	// h1 := os.Args[1]
-	// h2 := os.Args[2]
-	// reg := func() string {
-	// 	if len(os.Args) >= 4 {
-	// 		return os.Args[3]
-	// 	}
-	// 	return ""
-	// }()
 
 	// commits
 	cs, err := api.GetCommits(hashes)

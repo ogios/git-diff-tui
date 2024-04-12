@@ -27,20 +27,30 @@ func GetCommitLog(hashes *[2]string) ([]string, error) {
 	}
 	var o string
 	if hashes != nil {
-		args := make([]string, len(baseArgs)+1)
+		args := make([]string, len(baseArgs)+3)
 		copy(args, baseArgs)
-		args[len(args)-1] = hashes[0]
-		r, err := ExecCmd(args...)
-		if err != nil {
-			return nil, fmt.Errorf("git log error: %v", err)
+
+		if hashes[0] == "" {
+			args[len(args)-3] = hashes[1]
+		} else {
+			args[len(args)-3] = hashes[0] + ".." + hashes[1]
 		}
-		o += r + "\n"
-		args[len(args)-1] = hashes[0] + ".." + hashes[1]
-		r, err = ExecCmd(args...)
+		r, err := ExecCmd(args[:len(args)-2]...)
 		if err != nil {
 			return nil, fmt.Errorf("git log error: %v", err)
 		}
 		o += r
+
+		if hashes[0] != "" {
+			args[len(args)-3] = hashes[0]
+			args[len(args)-2] = "-n"
+			args[len(args)-1] = "1"
+			r, err = ExecCmd(args...)
+			if err != nil {
+				return nil, fmt.Errorf("git log error: %v", err)
+			}
+			o = r + "\n" + o
+		}
 	} else {
 		r, err := ExecCmd(baseArgs...)
 		if err != nil {
