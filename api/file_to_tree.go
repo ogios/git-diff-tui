@@ -46,13 +46,13 @@ func CreateNode(path []string, parent *Node) {
 		} else {
 			next = newDir()
 		}
+		parent.Children = append(parent.Children, next)
 	}
 	next.Name = p
 	next.Parent = parent
 	if len(path) > 1 {
 		CreateNode(path[:len(path)-1], next)
 	}
-	parent.Children = append(parent.Children, next)
 }
 
 func newDir() *Node {

@@ -15,14 +15,9 @@ type HomeModel struct {
 	Models []tea.Model
 }
 
-var homeStyle = lipgloss.NewStyle().
-	Width(comp.GlobalUIData.MaxWidth - 2).
-	Height(comp.GlobalUIData.MaxHeight - 2).
-	// Align(lipgloss.Center, lipgloss.Center).
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("69"))
+var homeStyle lipgloss.Style
 
-func getTreeNodes() *api.Node {
+func GetTreeNodes() *api.Node {
 	var node *api.Node = nil
 	for k := range data.DIFF_FILES {
 		node = api.PathToNode(k, node)
@@ -32,14 +27,29 @@ func getTreeNodes() *api.Node {
 }
 
 func NewHomeModel() *HomeModel {
+	w := comp.GlobalUIData.MaxWidth - 2
+	h := comp.GlobalUIData.MaxHeight - 2
+
+	homeStyle = lipgloss.NewStyle().
+		Width(w).
+		Height(h).
+		// Align(lipgloss.Center, lipgloss.Center).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("69"))
+
 	ms := []tea.Model{
-		NewTreeModel(getTreeNodes()),
+		NewTreeModel(GetTreeNodes(), [2]int{
+			int(float64(w) * 0.2),
+			h,
+		}),
 	}
-	h := &HomeModel{
+
+	home := &HomeModel{
 		Models: ms,
 		Tree:   ms[0].(*TreeModel),
 	}
-	return h
+
+	return home
 }
 
 func (m *HomeModel) Init() tea.Cmd {

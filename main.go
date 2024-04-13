@@ -100,4 +100,7 @@ func withUI() {
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
+
+	// node := left.GetTreeNodes()
+	// fmt.Println(node)
 }

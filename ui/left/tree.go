@@ -1,28 +1,34 @@
 package left
 
 import (
+	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ogios/merge-repo/api"
-	"github.com/ogios/merge-repo/ui/comp"
 )
 
 type NodeLine struct {
 	Node *api.Node
 	Text string
 }
+type SelectionNodeLine struct {
+	Line      *NodeLine
+	LineIndex int
+}
 type LineProcessor func(input *strings.Builder, index int)
 
 type TreeModel struct {
 	Root               *api.Node
-	Lines              []NodeLine
-	CurrentLine        int
-	CurrentViewLine    int
+	Lines              []*NodeLine
+	selections         []*SelectionNodeLine
+	ViewLineProcessors []LineProcessor
 	Block              [2]int
 	CurrentViewIndex   [2]int
-	ViewLineProcessors []LineProcessor
+	selectIndex        int
+	CurrentLine        int
+	CurrentViewLine    int
 }
 
 var (
@@ -30,16 +36,31 @@ var (
 	treeStyle             lipgloss.Style
 )
 
-func NewTreeModel(n *api.Node) tea.Model {
-	width := int(float64(comp.GlobalUIData.MaxWidth) * 0.1)
-	height := comp.GlobalUIData.MaxHeight - 4
-	treeStyle = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#ffad00")).Width(width).Height(height)
+func NewTreeModel(n *api.Node, block [2]int) tea.Model {
+	block[1] -= 2
+	treeStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#ffad00")).
+		Width(block[0]).
+		Height(block[1])
+	lines := DrawNode(n, 0)
+	selections := make([]*SelectionNodeLine, 0)
+	for i, nl := range lines {
+		if nl.Node.Type == api.NODE_FILE {
+			selections = append(selections, &SelectionNodeLine{
+				LineIndex: i,
+				Line:      nl,
+			})
+		}
+	}
 	t := &TreeModel{
 		Root:             n,
-		Lines:            DrawNode(n, 0),
+		Lines:            lines,
+		selections:       slices.Clip(selections),
+		selectIndex:      0,
 		CurrentLine:      0,
 		CurrentViewLine:  0,
-		Block:            [2]int{width, height},
+		Block:            block,
 		CurrentViewIndex: [2]int{0, 0},
 	}
 	t.ViewLineProcessors = []LineProcessor{
@@ -85,18 +106,58 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "j":
-			t.CurrentLine = ((t.CurrentLine + 1) + len(t.Lines)) % len(t.Lines)
+			// t.CurrentLine = ((t.CurrentLine + 1) + len(t.Lines)) % len(t.Lines)
+			t.nextSelection(1)
 		case "k":
-			t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
+			// t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
+			t.prevSelection(1)
 		case "h":
-			if t.CurrentViewIndex[0] > 0 {
-				t.CurrentViewIndex[0]--
-			}
+			t.CurrentViewIndex[0] = max(t.CurrentViewIndex[0]-1, 0)
 		case "l":
 			t.CurrentViewIndex[0]++
+		case "ctrl+d":
+			t.nextSelection(5)
+		case "ctrl+u":
+			t.prevSelection(5)
 		}
 	}
 	return t, tea.Batch(cmds...)
+}
+
+func (t *TreeModel) nextSelection(step int) {
+	t.updateSelection(min(t.selectIndex+step, len(t.selections)-1))
+}
+
+func (t *TreeModel) prevSelection(step int) {
+	t.updateSelection(max(t.selectIndex-step, 0))
+}
+
+func (t *TreeModel) updateSelection(i int) {
+	t.selectIndex = i
+	t.updateCurrentLine(t.selections[i].LineIndex)
+}
+
+func (t *TreeModel) nextLine(step int) {
+	t.updateCurrentLine(min(t.CurrentLine+step, len(t.Lines)-1))
+}
+
+func (t *TreeModel) prevLine(step int) {
+	t.updateCurrentLine(max(t.CurrentLine-step, 0))
+}
+
+func (t *TreeModel) updateCurrentLine(i int) {
+	t.CurrentLine = i
+	t.updateViewIndexY()
+}
+
+func (t *TreeModel) updateViewIndexY() {
+	moveViewThreshold := 3
+	if t.CurrentViewIndex[1]+t.Block[1]-moveViewThreshold < t.CurrentLine {
+		t.CurrentViewIndex[1] = max(t.CurrentLine-t.Block[1]+moveViewThreshold, 0)
+	}
+	if t.CurrentViewIndex[1]+moveViewThreshold > t.CurrentLine {
+		t.CurrentViewIndex[1] = max(t.CurrentLine-moveViewThreshold, 0)
+	}
 }
 
 func (t *TreeModel) View() string {
@@ -115,7 +176,9 @@ func (t *TreeModel) View() string {
 		}()
 		s.Grow(len(input) + 1)
 		s.WriteString(input)
-		s.WriteString("\n")
+		if i < len(visibleLines)-1 {
+			s.WriteString("\n")
+		}
 	}
 	return treeStyle.Render(s.String())
 }
@@ -123,8 +186,8 @@ func (t *TreeModel) View() string {
 const INDENT = "  "
 
 // func DrawNode(n *api.Node, level int) string {
-func DrawNode(n *api.Node, level int) []NodeLine {
-	ls := make([]NodeLine, 0)
+func DrawNode(n *api.Node, level int) []*NodeLine {
+	ls := make([]*NodeLine, 0)
 	var text strings.Builder
 	if isRoot(n) {
 		level = -1
@@ -132,7 +195,7 @@ func DrawNode(n *api.Node, level int) []NodeLine {
 		text.Grow(len(INDENT)*level + len(n.Name))
 		text.WriteString(strings.Repeat(INDENT, level))
 		text.WriteString(n.Name)
-		ls = append(ls, NodeLine{
+		ls = append(ls, &NodeLine{
 			Node: n,
 			Text: text.String(),
 		})
@@ -140,7 +203,7 @@ func DrawNode(n *api.Node, level int) []NodeLine {
 	for _, child := range n.Children {
 		ls = append(ls, DrawNode(child, level+1)...)
 	}
-	return ls
+	return slices.Clip(ls)
 }
 
 func isRoot(n *api.Node) bool {
