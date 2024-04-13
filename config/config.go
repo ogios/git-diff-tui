@@ -61,7 +61,7 @@ func useRefLog() {
 }
 
 func GetStrIfExist(l []string, i int) string {
-	if i < len(l)-1 {
+	if i >= len(l) {
 		return ""
 	}
 	return l[i]

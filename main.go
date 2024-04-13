@@ -3,65 +3,71 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/config"
+	"github.com/ogios/merge-repo/data"
 	"github.com/ogios/merge-repo/template"
-	ui "github.com/ogios/merge-repo/ui/main"
+	"github.com/ogios/merge-repo/ui/left"
 )
-
-var COMMITS []api.Commit
 
 func main() {
 	start := time.Now().UnixMilli()
 
 	// args
 	config.ParseArgs()
+
+	// commits
+	getCommits()
+
+	// diffinfo html
+	diffFileInfo()
+
+	// ui
+	if config.GlobalConfig.ShowUI {
+		withUI()
+	} else {
+		noui()
+	}
+
+	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
+}
+
+func getCommits() {
 	hashes := &[2]string{
 		config.GlobalConfig.Hash1, config.GlobalConfig.Hash2,
 	}
-
-	// commits
 	cs, err := api.GetCommits(hashes)
 	if err != nil {
 		panic(err)
 	}
-	COMMITS = cs
+	data.COMMITS = cs
 	// fmt.Println(cs)
 	log.Println(cs)
-
-	// operations
-	diffFileInfo(config.GlobalConfig.Regex)
-	if len(os.Args) >= 5 && os.Args[4] == "-n" {
-		noui(hashes[0], hashes[1], config.GlobalConfig.Regex)
-		return
-	}
-	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
 }
 
 // 生成diff表格
-func diffFileInfo(reg string) {
-	m := map[string][]api.Commit{}
-	for i := 0; i < len(COMMITS)-1; i++ {
-		old := COMMITS[i]
-		change := COMMITS[i+1]
+func diffFileInfo() {
+	// data.DIFF_FILES := map[string][]api.Commit{}
+	for i := 0; i < len(data.COMMITS)-1; i++ {
+		old := data.COMMITS[i]
+		change := data.COMMITS[i+1]
 		fs, err := api.GetDiffFiles(old.Hash, change.Hash)
 		log.Println(fs)
-		fs = api.MatchRegex(fs, reg)
+		fs = api.MatchRegex(fs, config.GlobalConfig.Regex)
 		if err != nil {
 			panic(err)
 		}
 		for _, f := range fs {
-			m[f] = append(m[f], change)
+			data.DIFF_FILES[f] = append(data.DIFF_FILES[f], change)
 		}
 	}
 
-	ls := make([][]string, len(m))
+	ls := make([][]string, len(data.DIFF_FILES))
 	n := 0
-	for fn, fcs := range m {
+	for fn, fcs := range data.DIFF_FILES {
 		var comment string
 		for _, c := range fcs {
 			comment += c.Comment + "\n\r"
@@ -69,11 +75,6 @@ func diffFileInfo(reg string) {
 		ls[n] = []string{
 			fn,
 			comment,
-			// c.Hash,
-			// c.Comment,
-			// c.Time,
-			// c.Tag,
-			// c.Author,
 		}
 		n++
 	}
@@ -81,18 +82,21 @@ func diffFileInfo(reg string) {
 }
 
 // 纯复制文件
-func noui(h1, h2, reg string) {
-	fs, err := api.GetDiffFiles(h1, h2)
+func noui() {
+	fs, err := api.GetDiffFiles(config.GlobalConfig.Hash1, config.GlobalConfig.Hash2)
 	if err != nil {
 		panic(err)
 	}
-	fs = api.MatchRegex(fs, reg)
+	fs = api.MatchRegex(fs, config.GlobalConfig.Regex)
 	api.CopyFiles(fs, "../..", "./copies")
 }
 
 // tui 未完成
 func withUI() {
-	p := tea.NewProgram(ui.NewHomeModel())
+	// p := left.NewHomeModel()
+	// fmt.Println(p.View())
+
+	p := tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}

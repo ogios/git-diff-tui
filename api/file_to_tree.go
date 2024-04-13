@@ -8,9 +8,9 @@ const (
 )
 
 type Node struct {
-	Children []*Node
 	Parent   *Node
 	Name     string
+	Children []*Node
 	Type     int
 }
 
@@ -22,10 +22,10 @@ func PathToNode(p string, root *Node) *Node {
 	for {
 		next, f := path.Split(p)
 		bs = append(bs, f)
-		p = next
-		if p == "/" {
+		if next == "" {
 			break
 		}
+		p = path.Dir(next)
 	}
 	CreateNode(bs, root)
 	return root
@@ -48,9 +48,11 @@ func CreateNode(path []string, parent *Node) {
 		}
 	}
 	next.Name = p
+	next.Parent = parent
 	if len(path) > 1 {
 		CreateNode(path[:len(path)-1], next)
 	}
+	parent.Children = append(parent.Children, next)
 }
 
 func newDir() *Node {
