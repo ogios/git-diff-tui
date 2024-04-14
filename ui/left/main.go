@@ -36,20 +36,15 @@ func NewHomeModel() *HomeModel {
 	homeStyle = lipgloss.NewStyle().
 		Width(w).
 		Height(h).
-		// Align(lipgloss.Center, lipgloss.Center).
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("69"))
 
 	focusStyle = lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("#ffad00"))
-		// Width(w).
-		// Height(h - 2)
 	unfocusStyle = lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("#ff5b00"))
-		// Width(w).
-		// Height(h - 2)
 
 	ms := []tea.Model{
 		NewTreeModel(GetTreeNodes(), [2]int{
@@ -82,6 +77,7 @@ func (m *HomeModel) Init() tea.Cmd {
 
 func (m *HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0)
+	toFocusModel := false
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -91,15 +87,23 @@ func (m *HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.FocusModelIndex = ((m.FocusModelIndex + 1) + len(m.Models)) % len(m.Models)
 		case "shift+tab":
 			m.FocusModelIndex = ((m.FocusModelIndex - 1) + len(m.Models)) % len(m.Models)
-		case "c":
-			// m.
 		default:
-			_, cmd := m.Models[m.FocusModelIndex].Update(msg)
-			cmds = append(cmds, cmd)
+			toFocusModel = true
 		}
 	case FileMsg:
 		m.CurrentFile = msg.FileRelPath
 		m.Text.ViewFile(m.CurrentFile)
+	case CopyFileMsg:
+		data.PROGRAM.ReleaseTerminal()
+		data.CopyFiles(msg.Files)
+		data.PROGRAM.RestoreTerminal()
+		return m, tea.Quit
+	default:
+		toFocusModel = true
+	}
+	if toFocusModel {
+		_, cmd := m.Models[m.FocusModelIndex].Update(msg)
+		cmds = append(cmds, cmd)
 	}
 	return m, tea.Batch(cmds...)
 }

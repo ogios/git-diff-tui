@@ -78,7 +78,7 @@ func CopyFiles(fs []string, from, to string) {
 		return
 	}
 	fmt.Println(string(res))
-	rlog := "removed(%d): "
+	rlog := "removed(%d): \n"
 	rlogf := make([]any, len(removed)+1)
 	rlogf[0] = len(removed)
 	for i, v := range removed {

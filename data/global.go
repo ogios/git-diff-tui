@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/config"
 )
@@ -14,6 +15,7 @@ var (
 	COMMITS    []api.Commit  = nil
 	DIFF_FILES DiffCommitMap = DiffCommitMap{}
 	BASE_PATH  string
+	PROGRAM    *tea.Program
 )
 
 func GetCommits() {
@@ -53,4 +55,8 @@ func init() {
 		panic(err)
 	}
 	BASE_PATH = strings.TrimSpace(p)
+}
+
+func CopyFiles(fs []string) {
+	api.CopyFiles(fs, BASE_PATH, "./copies")
 }

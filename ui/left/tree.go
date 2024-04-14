@@ -36,6 +36,10 @@ type FileMsg struct {
 	FileRelPath string
 }
 
+type CopyFileMsg struct {
+	Files []string
+}
+
 var (
 	copyColor                = lipgloss.Color("#00bd86")
 	currentLineStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#000000"))
@@ -47,15 +51,15 @@ var (
 func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 	block[1] -= 2
 	lines := DrawNode(n, 0)
-	selections := make([]*SelectionNodeLine, 0)
-	for i, nl := range lines {
-		if nl.Node.Type == api.NODE_FILE {
-			selections = append(selections, &SelectionNodeLine{
-				LineIndex: i,
-				Line:      nl,
-			})
-		}
-	}
+	// selections := make([]*SelectionNodeLine, 0)
+	// for i, nl := range lines {
+	// 	if nl.Node.Type == api.NODE_FILE {
+	// 		selections = append(selections, &SelectionNodeLine{
+	// 			LineIndex: i,
+	// 			Line:      nl,
+	// 		})
+	// 	}
+	// }
 	t := &TreeModel{
 		Root:  n,
 		Lines: lines,
@@ -112,40 +116,47 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 	return t
 }
 
-func (t *TreeModel) UpdateFileMsg() tea.Cmd {
-	getPathFromNode := func(n *api.Node) string {
-		names := []string{}
-		count := 0
-		for n.Parent != nil {
-			names = append(names, n.Name)
-			count += len(n.Name)
-			n = n.Parent
-		}
-		var b strings.Builder
-		b.Grow(count + len(names))
-		for i := len(names) - 1; i >= 0; i-- {
-			b.WriteString(names[i])
-			if i > 0 {
-				b.WriteString("/")
-			}
-		}
-		return b.String()
-	}
+func (t *TreeModel) updateFileMsg() tea.Cmd {
 	return func() tea.Msg {
 		if len(t.Lines) == 0 {
 			return nil
 		}
 		nl := t.Lines[t.CurrentLine]
 		if nl.Node.Type == api.NODE_FILE {
-			return FileMsg{FileRelPath: getPathFromNode(nl.Node)}
+			return FileMsg{FileRelPath: api.NodeToPath(nl.Node)}
 		} else {
 			return nil
 		}
 	}
 }
 
+func (t *TreeModel) copyFiles() tea.Cmd {
+	fs := []string{}
+	api.LoopFilesUnder(t.Root, func(n *api.Node) {
+		if n.IsCopy() {
+			fs = append(fs, api.NodeToPath(n))
+		}
+	})
+	fs = slices.Clip(fs)
+
+	return func() tea.Msg {
+		if len(fs) == 0 {
+			return nil
+		}
+		return CopyFileMsg{
+			Files: fs,
+		}
+		// nl := t.Lines[t.CurrentLine]
+		// if nl.Node.Type == api.NODE_FILE {
+		// 	return FileMsg{FileRelPath: api.NodeToPath(nl.Node)}
+		// } else {
+		// 	return nil
+		// }
+	}
+}
+
 func (t *TreeModel) Init() tea.Cmd {
-	return t.UpdateFileMsg()
+	return t.updateFileMsg()
 }
 
 func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -155,12 +166,10 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "j":
 			// t.CurrentLine = ((t.CurrentLine + 1) + len(t.Lines)) % len(t.Lines)
-			// cmds = append(cmds, t.nextSelection(1))
 			cmds = append(cmds, t.nextLine(1))
 		case "k":
 			// t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
 			cmds = append(cmds, t.prevLine(1))
-
 		case "h":
 			t.CurrentViewIndex[0] = max(t.CurrentViewIndex[0]-1, 0)
 		case "l":
@@ -173,20 +182,10 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case " ":
 			n := t.Lines[t.CurrentLine].Node
 			n.ToggleCopy()
-			// api.LoopFilesUnder(n, func(n *api.Node) {
-			// 	n.Parent.ToggleCopy(n.Name)
-			// })
 		case "a":
 			t.Root.ToggleCopy()
-			// if t.Root.IsCopy() {
-			// 	api.LoopFilesUnder(t.Root, func(n *api.Node) {
-			// 		n.Parent.RmCopy(n.Name)
-			// 	})
-			// } else {
-			// 	api.LoopFilesUnder(t.Root, func(n *api.Node) {
-			// 		n.Parent.AddCopy(n.Name)
-			// 	})
-			// }
+		case "c":
+			cmds = append(cmds, t.copyFiles())
 		}
 	}
 	return t, tea.Batch(cmds...)
@@ -217,7 +216,7 @@ func (t *TreeModel) updateCurrentLine(i int) tea.Cmd {
 	if t.CurrentLine != i {
 		t.CurrentLine = i
 		t.updateViewIndexY()
-		return t.UpdateFileMsg()
+		return t.updateFileMsg()
 	}
 	return nil
 }

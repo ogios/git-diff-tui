@@ -24,14 +24,14 @@ func main() {
 	// html
 	GenDiffHTML()
 
+	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
+
 	// ui
 	if config.GlobalConfig.ShowUI {
 		withUI()
 	} else {
-		noui()
+		noUI()
 	}
-
-	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
 }
 
 // 生成diff表格
@@ -53,13 +53,13 @@ func GenDiffHTML() {
 }
 
 // 纯复制文件
-func noui() {
+func noUI() {
 	fs, err := api.GetDiffFiles(config.GlobalConfig.Hash1, config.GlobalConfig.Hash2)
 	if err != nil {
 		panic(err)
 	}
 	fs = api.MatchRegex(fs, config.GlobalConfig.Regex)
-	api.CopyFiles(fs, data.BASE_PATH, "./copies")
+	data.CopyFiles(fs)
 }
 
 // tui 未完成
@@ -69,8 +69,8 @@ func withUI() {
 	logger := config.CraeteLogger()
 	defer logger.Close()
 
-	p := tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
+	data.PROGRAM = tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
+	if _, err := data.PROGRAM.Run(); err != nil {
 		log.Fatal(err)
 	}
 

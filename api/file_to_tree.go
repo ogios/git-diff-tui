@@ -2,6 +2,7 @@ package api
 
 import (
 	"path"
+	"strings"
 )
 
 const (
@@ -75,6 +76,25 @@ func newFile() *Node {
 	return &Node{
 		Type: NODE_FILE,
 	}
+}
+
+func NodeToPath(n *Node) string {
+	names := []string{}
+	count := 0
+	for n.Parent != nil {
+		names = append(names, n.Name)
+		count += len(n.Name)
+		n = n.Parent
+	}
+	var b strings.Builder
+	b.Grow(count + len(names))
+	for i := len(names) - 1; i >= 0; i-- {
+		b.WriteString(names[i])
+		if i > 0 {
+			b.WriteString("/")
+		}
+	}
+	return b.String()
 }
 
 func LoopFilesUnder(root *Node, handler func(n *Node)) {
