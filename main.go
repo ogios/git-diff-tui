@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,14 +39,14 @@ func main() {
 func GenDiffHTML() {
 	ls := make([][]string, len(data.DIFF_FILES))
 	n := 0
-	for fn, fcs := range data.DIFF_FILES {
-		var comment string
-		for _, c := range fcs {
-			comment += c.Comment + "\n\r"
+	for fn := range data.DIFF_FILES {
+		s, err := data.GetDiffFileComment(fn)
+		if err != nil {
+			panic(err)
 		}
 		ls[n] = []string{
 			fn,
-			comment,
+			strings.Join(s, "\n"),
 		}
 		n++
 	}

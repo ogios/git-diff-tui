@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/ogios/merge-repo/api"
@@ -54,7 +54,7 @@ func useRefLog() {
 		panic(err)
 	}
 	if len(cs) < 2 {
-		panic(fmt.Errorf("not enough commits"))
+		panic(errors.New("not enough commits"))
 	}
 	GlobalConfig.Hash2 = cs[0]
 	GlobalConfig.Hash1 = cs[len(cs)-1]

@@ -13,6 +13,7 @@ import (
 type HomeModel struct {
 	Tree            *TreeModel
 	Text            *ViewModel
+	Comment         *CommentsModel
 	CurrentFile     string
 	Models          []tea.Model
 	FocusModelIndex int
@@ -46,14 +47,35 @@ func NewHomeModel() *HomeModel {
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("#ff5b00"))
 
+	modelCount := 3
+	modelsHeight := h - 3
+	modelsWidth := w - 2*modelCount
+	getModelWidth := func() func(per float64) int {
+		count := modelCount
+		avaliable := modelsWidth
+		return func(per float64) int {
+			count--
+			if count == 0 {
+				return avaliable
+			} else {
+				r := int(float64(modelsWidth) * per)
+				avaliable -= r
+				return r
+			}
+		}
+	}()
 	ms := []tea.Model{
 		NewTreeModel(GetTreeNodes(), [2]int{
-			int(float64(w) * 0.2),
-			h - 3,
+			getModelWidth(0.2),
+			modelsHeight,
 		}),
 		NewViewModel([2]int{
-			int(float64(w) * 0.4),
-			h - 3,
+			getModelWidth(0.4),
+			modelsHeight,
+		}),
+		NewCommentsModel([2]int{
+			getModelWidth(0.4),
+			modelsHeight,
 		}),
 	}
 
@@ -61,6 +83,7 @@ func NewHomeModel() *HomeModel {
 		Models:          ms,
 		Tree:            ms[0].(*TreeModel),
 		Text:            ms[1].(*ViewModel),
+		Comment:         ms[2].(*CommentsModel),
 		FocusModelIndex: 0,
 	}
 
@@ -93,6 +116,7 @@ func (m *HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FileMsg:
 		m.CurrentFile = msg.FileRelPath
 		m.Text.ViewFile(m.CurrentFile)
+		m.Comment.ViewComment(m.CurrentFile)
 	case CopyFileMsg:
 		data.PROGRAM.ReleaseTerminal()
 		data.CopyFiles(msg.Files)

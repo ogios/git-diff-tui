@@ -1,6 +1,12 @@
 package left
 
 import (
+	"bytes"
+	"log"
+	"path"
+
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/quick"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,9 +31,17 @@ func NewViewModel(block [2]int) tea.Model {
 		cache: *api.NewStringCacher(func(k string) []byte {
 			content, err := api.GetGitFile(config.GlobalConfig.Hash2, k)
 			if err != nil {
-				content = errorMsg.Render(err.Error())
+				return []byte(errorMsg.Render(err.Error()))
 			}
-			return []byte(content)
+			buf := new(bytes.Buffer)
+			lex := lexers.Match(path.Base(k)).Config().Name
+			log.Println(lex, path.Base(k))
+			err = quick.Highlight(buf, content, lex, "terminal16m", "catppuccin-mocha")
+			if err != nil {
+				return []byte(errorMsg.Render(err.Error()))
+			}
+			return buf.Bytes()
+			// return []byte(content)
 		}),
 	}
 	return view
@@ -35,18 +49,22 @@ func NewViewModel(block [2]int) tea.Model {
 
 func (v *ViewModel) ViewFile(p string) {
 	content := v.cache.Get(p)
+	log.Println(string(content))
 	v.v.SetContent(string(content))
 	v.v.GotoTop()
 }
 
 func (v *ViewModel) Init() tea.Cmd {
-	return v.v.Init()
+	return nil
 }
 
 func (v *ViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	v.v, cmd = v.v.Update(msg)
-	return v, cmd
+	var cmds []tea.Cmd
+	vp, cmd := v.v.Update(msg)
+	v.v = vp
+	// cmds = append(cmds, viewport.Sync(v.v), cmd)
+	cmds = append(cmds, cmd)
+	return v, tea.Batch(cmds...)
 }
 
 func (v *ViewModel) View() string {

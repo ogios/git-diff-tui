@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"log"
 	"strings"
 
@@ -59,4 +60,15 @@ func init() {
 
 func CopyFiles(fs []string) {
 	api.CopyFiles(fs, BASE_PATH, "./copies")
+}
+
+func GetDiffFileComment(f string) ([]string, error) {
+	if df, ok := DIFF_FILES[f]; ok {
+		fcs := make([]string, len(df))
+		for i, c := range df {
+			fcs[i] = c.Comment
+		}
+		return fcs, nil
+	}
+	return nil, errors.New("diff file not found")
 }
