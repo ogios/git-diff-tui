@@ -20,29 +20,32 @@ type SelectionNodeLine struct {
 type LineProcessor func(input *strings.Builder, index int)
 
 type TreeModel struct {
-	Root               *api.Node
-	Lines              []*NodeLine
-	selections         []*SelectionNodeLine
+	Root  *api.Node
+	Lines []*NodeLine
+	// selections         []*SelectionNodeLine
+	copiesNode         map[*api.Node]struct{}
 	ViewLineProcessors []LineProcessor
 	Block              [2]int
 	CurrentViewIndex   [2]int
-	selectIndex        int
-	CurrentLine        int
-	CurrentViewLine    int
+	// selectIndex        int
+	CurrentLine     int
+	CurrentViewLine int
+}
+
+type FileMsg struct {
+	FileRelPath string
 }
 
 var (
-	selectedNodeLineStyle = lipgloss.NewStyle().Background(lipgloss.Color("#ffffff")).Foreground(lipgloss.Color("#000000"))
-	treeStyle             lipgloss.Style
+	copyColor                = lipgloss.Color("#00bd86")
+	currentLineStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("#000000"))
+	currentLineSelectedStyle = currentLineStyle.Copy().Background(copyColor)
+	currentLineNormalStyle   = currentLineStyle.Copy().Background(lipgloss.Color("#ffffff"))
+	selectedStyle            = lipgloss.NewStyle().Foreground(copyColor)
 )
 
 func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 	block[1] -= 2
-	treeStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("#ffad00")).
-		Width(block[0]).
-		Height(block[1])
 	lines := DrawNode(n, 0)
 	selections := make([]*SelectionNodeLine, 0)
 	for i, nl := range lines {
@@ -54,15 +57,16 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 		}
 	}
 	t := &TreeModel{
-		Root:             n,
-		Lines:            lines,
-		selections:       slices.Clip(selections),
-		selectIndex:      0,
-		CurrentLine:      0,
+		Root:  n,
+		Lines: lines,
+		// selections: slices.Clip(selections),
+		// selectIndex:      0,
+		// CurrentLine:      0,
 		CurrentViewLine:  0,
 		Block:            block,
 		CurrentViewIndex: [2]int{0, 0},
 	}
+	// t.updateSelection(0)
 	t.ViewLineProcessors = []LineProcessor{
 		func(input *strings.Builder, i int) {
 			visibleLen := t.Block[0]
@@ -84,10 +88,22 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 			}
 		},
 		func(input *strings.Builder, i int) {
+			l := t.Lines[i]
 			if i == t.CurrentLine {
 				s := input.String()
 				input.Reset()
-				rs := selectedNodeLineStyle.Render(s)
+				var rs string
+				if l.Node.IsCopy() {
+					rs = currentLineSelectedStyle.Render(s)
+				} else {
+					rs = currentLineNormalStyle.Render(s)
+				}
+				input.Grow(len(rs))
+				input.WriteString(rs)
+			} else if l.Node.IsCopy() {
+				s := input.String()
+				input.Reset()
+				rs := selectedStyle.Render(s)
 				input.Grow(len(rs))
 				input.WriteString(rs)
 			}
@@ -96,8 +112,40 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 	return t
 }
 
+func (t *TreeModel) UpdateFileMsg() tea.Cmd {
+	getPathFromNode := func(n *api.Node) string {
+		names := []string{}
+		count := 0
+		for n.Parent != nil {
+			names = append(names, n.Name)
+			count += len(n.Name)
+			n = n.Parent
+		}
+		var b strings.Builder
+		b.Grow(count + len(names))
+		for i := len(names) - 1; i >= 0; i-- {
+			b.WriteString(names[i])
+			if i > 0 {
+				b.WriteString("/")
+			}
+		}
+		return b.String()
+	}
+	return func() tea.Msg {
+		if len(t.Lines) == 0 {
+			return nil
+		}
+		nl := t.Lines[t.CurrentLine]
+		if nl.Node.Type == api.NODE_FILE {
+			return FileMsg{FileRelPath: getPathFromNode(nl.Node)}
+		} else {
+			return nil
+		}
+	}
+}
+
 func (t *TreeModel) Init() tea.Cmd {
-	return nil
+	return t.UpdateFileMsg()
 }
 
 func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -107,47 +155,71 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "j":
 			// t.CurrentLine = ((t.CurrentLine + 1) + len(t.Lines)) % len(t.Lines)
-			t.nextSelection(1)
+			// cmds = append(cmds, t.nextSelection(1))
+			cmds = append(cmds, t.nextLine(1))
 		case "k":
 			// t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
-			t.prevSelection(1)
+			cmds = append(cmds, t.prevLine(1))
+
 		case "h":
 			t.CurrentViewIndex[0] = max(t.CurrentViewIndex[0]-1, 0)
 		case "l":
 			t.CurrentViewIndex[0]++
 		case "ctrl+d":
-			t.nextSelection(5)
+			cmds = append(cmds, t.nextLine(5))
 		case "ctrl+u":
-			t.prevSelection(5)
+			cmds = append(cmds, t.prevLine(5))
+
+		case " ":
+			n := t.Lines[t.CurrentLine].Node
+			n.ToggleCopy()
+			// api.LoopFilesUnder(n, func(n *api.Node) {
+			// 	n.Parent.ToggleCopy(n.Name)
+			// })
+		case "a":
+			t.Root.ToggleCopy()
+			// if t.Root.IsCopy() {
+			// 	api.LoopFilesUnder(t.Root, func(n *api.Node) {
+			// 		n.Parent.RmCopy(n.Name)
+			// 	})
+			// } else {
+			// 	api.LoopFilesUnder(t.Root, func(n *api.Node) {
+			// 		n.Parent.AddCopy(n.Name)
+			// 	})
+			// }
 		}
 	}
 	return t, tea.Batch(cmds...)
 }
 
-func (t *TreeModel) nextSelection(step int) {
-	t.updateSelection(min(t.selectIndex+step, len(t.selections)-1))
+// func (t *TreeModel) nextSelection(step int) tea.Cmd {
+// 	return t.updateSelection(min(t.selectIndex+step, len(t.selections)-1))
+// }
+//
+// func (t *TreeModel) prevSelection(step int) tea.Cmd {
+// 	return t.updateSelection(max(t.selectIndex-step, 0))
+// }
+//
+// func (t *TreeModel) updateSelection(i int) tea.Cmd {
+// 	t.selectIndex = i
+// 	return t.updateCurrentLine(t.selections[i].LineIndex)
+// }
+
+func (t *TreeModel) nextLine(step int) tea.Cmd {
+	return t.updateCurrentLine(min(t.CurrentLine+step, len(t.Lines)-1))
 }
 
-func (t *TreeModel) prevSelection(step int) {
-	t.updateSelection(max(t.selectIndex-step, 0))
+func (t *TreeModel) prevLine(step int) tea.Cmd {
+	return t.updateCurrentLine(max(t.CurrentLine-step, 0))
 }
 
-func (t *TreeModel) updateSelection(i int) {
-	t.selectIndex = i
-	t.updateCurrentLine(t.selections[i].LineIndex)
-}
-
-func (t *TreeModel) nextLine(step int) {
-	t.updateCurrentLine(min(t.CurrentLine+step, len(t.Lines)-1))
-}
-
-func (t *TreeModel) prevLine(step int) {
-	t.updateCurrentLine(max(t.CurrentLine-step, 0))
-}
-
-func (t *TreeModel) updateCurrentLine(i int) {
-	t.CurrentLine = i
-	t.updateViewIndexY()
+func (t *TreeModel) updateCurrentLine(i int) tea.Cmd {
+	if t.CurrentLine != i {
+		t.CurrentLine = i
+		t.updateViewIndexY()
+		return t.UpdateFileMsg()
+	}
+	return nil
 }
 
 func (t *TreeModel) updateViewIndexY() {
@@ -180,7 +252,7 @@ func (t *TreeModel) View() string {
 			s.WriteString("\n")
 		}
 	}
-	return treeStyle.Render(s.String())
+	return s.String()
 }
 
 const INDENT = "  "
@@ -192,8 +264,13 @@ func DrawNode(n *api.Node, level int) []*NodeLine {
 	if isRoot(n) {
 		level = -1
 	} else {
-		text.Grow(len(INDENT)*level + len(n.Name))
+		text.Grow(len(INDENT)*level + len(n.Name) + 1)
 		text.WriteString(strings.Repeat(INDENT, level))
+		if n.Type == api.NODE_DIR {
+			text.WriteString("▸")
+		} else {
+			text.WriteString("⋅")
+		}
 		text.WriteString(n.Name)
 		ls = append(ls, &NodeLine{
 			Node: n,
