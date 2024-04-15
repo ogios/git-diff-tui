@@ -2,7 +2,6 @@ package left
 
 import (
 	"bytes"
-	"log"
 	"path"
 
 	"github.com/alecthomas/chroma/v2/lexers"
@@ -34,14 +33,16 @@ func NewViewModel(block [2]int) tea.Model {
 				return []byte(errorMsg.Render(err.Error()))
 			}
 			buf := new(bytes.Buffer)
-			lex := lexers.Match(path.Base(k)).Config().Name
-			log.Println(lex, path.Base(k))
-			err = quick.Highlight(buf, content, lex, "terminal16m", "catppuccin-mocha")
+			lex := lexers.Match(path.Base(k))
+			lang := "plaintext"
+			if lex != nil {
+				lang = lex.Config().Name
+			}
+			err = quick.Highlight(buf, content, lang, "terminal16m", "catppuccin-mocha")
 			if err != nil {
 				return []byte(errorMsg.Render(err.Error()))
 			}
 			return buf.Bytes()
-			// return []byte(content)
 		}),
 	}
 	return view
@@ -49,7 +50,6 @@ func NewViewModel(block [2]int) tea.Model {
 
 func (v *ViewModel) ViewFile(p string) {
 	content := v.cache.Get(p)
-	log.Println(string(content))
 	v.v.SetContent(string(content))
 	v.v.GotoTop()
 }

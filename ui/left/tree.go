@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"github.com/ogios/merge-repo/api"
 )
 
@@ -20,16 +21,13 @@ type SelectionNodeLine struct {
 type LineProcessor func(input *strings.Builder, index int)
 
 type TreeModel struct {
-	Root  *api.Node
-	Lines []*NodeLine
-	// selections         []*SelectionNodeLine
-	copiesNode         map[*api.Node]struct{}
+	Root               *api.Node
+	Lines              []*NodeLine
 	ViewLineProcessors []LineProcessor
 	Block              [2]int
 	CurrentViewIndex   [2]int
-	// selectIndex        int
-	CurrentLine     int
-	CurrentViewLine int
+	CurrentLine        int
+	CurrentViewLine    int
 }
 
 type FileMsg struct {
@@ -49,23 +47,11 @@ var (
 )
 
 func NewTreeModel(n *api.Node, block [2]int) tea.Model {
-	block[1] -= 2
+	// block[1] -= 2
 	lines := DrawNode(n, 0)
-	// selections := make([]*SelectionNodeLine, 0)
-	// for i, nl := range lines {
-	// 	if nl.Node.Type == api.NODE_FILE {
-	// 		selections = append(selections, &SelectionNodeLine{
-	// 			LineIndex: i,
-	// 			Line:      nl,
-	// 		})
-	// 	}
-	// }
 	t := &TreeModel{
-		Root:  n,
-		Lines: lines,
-		// selections: slices.Clip(selections),
-		// selectIndex:      0,
-		// CurrentLine:      0,
+		Root:             n,
+		Lines:            lines,
 		CurrentViewLine:  0,
 		Block:            block,
 		CurrentViewIndex: [2]int{0, 0},
@@ -80,12 +66,13 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 			nl := t.Lines[i]
 			inputLen := len(nl.Text)
 			if start < inputLen {
+				s := runewidth.TruncateLeft(nl.Text, start, "")
 				if end < inputLen {
-					input.WriteString(nl.Text[start:end])
-					// try remove big chars
+					input.WriteString(runewidth.Truncate(nl.Text, end-start, ""))
 				} else {
-					input.WriteString(nl.Text[start:])
-					input.WriteString(strings.Repeat(" ", end-inputLen))
+					input.WriteString(s)
+					viewWidth := runewidth.StringWidth(s)
+					input.WriteString(strings.Repeat(" ", visibleLen-viewWidth))
 				}
 			} else {
 				input.WriteString(strings.Repeat(" ", visibleLen))
@@ -146,12 +133,6 @@ func (t *TreeModel) copyFiles() tea.Cmd {
 		return CopyFileMsg{
 			Files: fs,
 		}
-		// nl := t.Lines[t.CurrentLine]
-		// if nl.Node.Type == api.NODE_FILE {
-		// 	return FileMsg{FileRelPath: api.NodeToPath(nl.Node)}
-		// } else {
-		// 	return nil
-		// }
 	}
 }
 
@@ -175,9 +156,9 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "l":
 			t.CurrentViewIndex[0]++
 		case "ctrl+d":
-			cmds = append(cmds, t.nextLine(5))
+			cmds = append(cmds, t.nextLine(10))
 		case "ctrl+u":
-			cmds = append(cmds, t.prevLine(5))
+			cmds = append(cmds, t.prevLine(10))
 
 		case " ":
 			n := t.Lines[t.CurrentLine].Node
@@ -190,19 +171,6 @@ func (t *TreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	return t, tea.Batch(cmds...)
 }
-
-// func (t *TreeModel) nextSelection(step int) tea.Cmd {
-// 	return t.updateSelection(min(t.selectIndex+step, len(t.selections)-1))
-// }
-//
-// func (t *TreeModel) prevSelection(step int) tea.Cmd {
-// 	return t.updateSelection(max(t.selectIndex-step, 0))
-// }
-//
-// func (t *TreeModel) updateSelection(i int) tea.Cmd {
-// 	t.selectIndex = i
-// 	return t.updateCurrentLine(t.selections[i].LineIndex)
-// }
 
 func (t *TreeModel) nextLine(step int) tea.Cmd {
 	return t.updateCurrentLine(min(t.CurrentLine+step, len(t.Lines)-1))
