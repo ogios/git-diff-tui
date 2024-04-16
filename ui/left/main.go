@@ -31,8 +31,8 @@ func GetTreeNodes() *api.Node {
 }
 
 func NewHomeModel() *HomeModel {
-	w := comp.GlobalUIData.MaxWidth - 2
-	h := comp.GlobalUIData.MaxHeight - 2
+	w := comp.GlobalUIData.MaxWidth - 6
+	h := comp.GlobalUIData.MaxHeight - 6
 
 	homeStyle = lipgloss.NewStyle().
 		Width(w).
@@ -104,6 +104,8 @@ func (m *HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "q":
+			fallthrough
 		case "ctrl+c":
 			return m, tea.Quit
 		case "tab":
