@@ -64,11 +64,11 @@ func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 			start := t.CurrentViewIndex[0]
 			end := start + visibleLen
 			nl := t.Lines[i]
-			inputLen := len(nl.Text)
+			inputLen := runewidth.StringWidth(nl.Text)
 			if start < inputLen {
 				s := runewidth.TruncateLeft(nl.Text, start, "")
 				if end < inputLen {
-					input.WriteString(runewidth.Truncate(nl.Text, end-start, ""))
+					input.WriteString(runewidth.Truncate(s, end-start, ""))
 				} else {
 					input.WriteString(s)
 					viewWidth := runewidth.StringWidth(s)
