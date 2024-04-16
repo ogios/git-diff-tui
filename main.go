@@ -70,7 +70,13 @@ func withUI() {
 	logger := config.CraeteLogger()
 	defer logger.Close()
 
-	data.PROGRAM = tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
+	// data.PROGRAM = tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
+	data.PROGRAM = tea.NewProgram(left.NewHomeModel(), func() func(p *tea.Program) {
+		if config.GlobalConfig.AltScreen {
+			return tea.WithAltScreen()
+		}
+		return func(p *tea.Program) {}
+	}())
 	if _, err := data.PROGRAM.Run(); err != nil {
 		log.Fatal(err)
 	}

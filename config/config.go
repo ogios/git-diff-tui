@@ -9,14 +9,15 @@ import (
 
 type Config struct {
 	Hash1, Hash2, Regex string
-	ShowUI              bool
+	ShowUI, AltScreen   bool
 }
 
 var GlobalConfig = Config{
-	Hash1:  "",
-	Hash2:  "",
-	Regex:  "",
-	ShowUI: true,
+	Hash1:     "",
+	Hash2:     "",
+	Regex:     "",
+	ShowUI:    true,
+	AltScreen: true,
 }
 
 type ArgFunc = func(index int) int
@@ -29,6 +30,8 @@ func ParseArgs() {
 		switch os.Args[i] {
 		case "-n":
 			GlobalConfig.ShowUI = false
+		case "-a":
+			GlobalConfig.AltScreen = false
 		case "-r":
 			useRefLog()
 			onlyReg = true
