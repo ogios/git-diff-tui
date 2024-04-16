@@ -66,15 +66,15 @@ func NewHomeModel() *HomeModel {
 	}()
 	ms := []tea.Model{
 		NewTreeModel(GetTreeNodes(), [2]int{
-			getModelWidth(0.2) - 4,
+			getModelWidth(0.2) - 8,
 			modelsHeight - 2,
 		}),
 		NewViewModel([2]int{
-			getModelWidth(0.4) - 4,
+			getModelWidth(0.4) - 8,
 			modelsHeight - 2,
 		}),
 		NewCommentsModel([2]int{
-			getModelWidth(0.4) - 4,
+			getModelWidth(0.4) - 8,
 			modelsHeight - 2,
 		}),
 	}
