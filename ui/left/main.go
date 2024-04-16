@@ -31,8 +31,8 @@ func GetTreeNodes() *api.Node {
 }
 
 func NewHomeModel() *HomeModel {
-	w := comp.GlobalUIData.MaxWidth - 6
-	h := comp.GlobalUIData.MaxHeight - 6
+	w := comp.GlobalUIData.MaxWidth - 2
+	h := comp.GlobalUIData.MaxHeight - 2
 
 	homeStyle = lipgloss.NewStyle().
 		Width(w).
@@ -66,16 +66,16 @@ func NewHomeModel() *HomeModel {
 	}()
 	ms := []tea.Model{
 		NewTreeModel(GetTreeNodes(), [2]int{
-			getModelWidth(0.2),
-			modelsHeight,
+			getModelWidth(0.2) - 4,
+			modelsHeight - 2,
 		}),
 		NewViewModel([2]int{
-			getModelWidth(0.4),
-			modelsHeight,
+			getModelWidth(0.4) - 4,
+			modelsHeight - 2,
 		}),
 		NewCommentsModel([2]int{
-			getModelWidth(0.4),
-			modelsHeight,
+			getModelWidth(0.4) - 4,
+			modelsHeight - 2,
 		}),
 	}
 
