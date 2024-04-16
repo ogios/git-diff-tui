@@ -2,10 +2,14 @@
 
 使用方法:
 
+运行`go install`安装为可执行文件
+
+> 删除可直接`where merg-repo`/`which merg-repo`然后直接删除掉就行
+
 ```
-go run <commit_hash> <commit_hash> <path_regex>
+merge-repo <commit_hash> <commit_hash> <path_regex>
 # or
-go run -r <path_regex>
+merge-repo -r <path_regex>
 ```
 
 `-r`的意思是使用`reflog`获取当前分支的创建点的`commit_hash`到当前的`hash`
