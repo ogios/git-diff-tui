@@ -2,19 +2,24 @@ package comp
 
 import (
 	"fmt"
+	"slices"
 	"strings"
+	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/ogios/merge-repo/api"
 )
 
 type ANSITable struct {
-	Sub   *ANSITable `json:"sub"`
-	Data  []byte     `json:"data"`
-	Bound [2]int     `json:"bound"`
+	Sub  *ANSITable
+	Data []byte
+
+	// rune index
+	Bound [2]int
 }
 
 type ANSITableList struct {
-	l []*ANSITable
+	L []*ANSITable
 }
 
 type ANSIStackItem struct {
@@ -41,18 +46,25 @@ func GetANSIs(s string) (ANSITableList, string) {
 		// met `esc` char
 		if v == ESCAPE_SEQUENCE {
 			ansi = true
+			// using utf8 rune function
+			// but maybe just byte(v) is enough since ansi only contains rune of one byte?
+			byteData := []byte{}
+			byteData = utf8.AppendRune(byteData, v)
 			ansiStack = append(ansiStack, &ANSIStackItem{
 				startIndex: i,
-				data:       []byte{byte(v)},
+				data:       byteData,
 			})
 		} else {
 			// in ansi sequence content
 			if ansi {
 				last := ansiStack[len(ansiStack)-1]
-				last.data = append(last.data, byte(v))
+				last.data = utf8.AppendRune(last.data, v)
+				// last.data = append(last.data, byte(v))
 				// end of an ansi sequence. terminate
 				if v == 'm' {
 					ansi = false
+					// clip cap
+					last.data = slices.Clip(last.data)
 					// ends all ansi sequences in stack
 					if string(last.data) == ESCAPE_SEQUENCE_END {
 						if len(ansiStack) > 1 {
@@ -70,7 +82,7 @@ func GetANSIs(s string) (ANSITableList, string) {
 		}
 	}
 	return ANSITableList{
-		l: tables,
+		L: tables,
 	}, normalString.String()
 }
 
@@ -105,11 +117,11 @@ const (
 var EMPTY_ANSITABLELIST = make([]*ANSITable, 0)
 
 func (a *ANSITableList) GetSlice(startIndex, endIndex int) []*ANSITable {
-	if len(a.l) == 0 {
-		return a.l
+	if len(a.L) == 0 {
+		return a.L
 	}
 	var start, end int
-	temp := search(a.l, startIndex)
+	temp := search(a.L, startIndex)
 	fmt.Println("start temp:", temp)
 	if len(temp) == 1 {
 		start = temp[0]
@@ -121,7 +133,7 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []*ANSITable {
 		}
 	}
 
-	temp = search(a.l, endIndex)
+	temp = search(a.L, endIndex)
 	fmt.Println("end temp:", temp)
 	if len(temp) == 1 {
 		end = temp[0]
@@ -134,7 +146,7 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []*ANSITable {
 	}
 	fmt.Println("start and end index:", start, end)
 
-	return a.l[start : end+1]
+	return a.L[start : end+1]
 }
 
 func search(list []*ANSITable, pos int) []int {
@@ -202,34 +214,143 @@ func search(list []*ANSITable, pos int) []int {
 }
 
 type SubLine struct {
-	Data  string
+	// Data  []byte
+	Data  *RuneDataList
 	Bound [2]int
 }
 
+type RuneDataList struct {
+	L          []*RuneData
+	TotalWidth int
+}
+
+func (r *RuneDataList) Init(s string) *RuneDataList {
+	r.L = make([]*RuneData, len(s))
+	for i, v := range s {
+		bs := []byte{}
+		utf8.AppendRune(bs, v)
+		w := runewidth.RuneWidth(v)
+		r.L[i] = &RuneData{
+			Byte:  slices.Clip(bs),
+			Width: w,
+		}
+		r.TotalWidth += w
+	}
+	return r
+}
+
+type RuneData struct {
+	Byte  []byte
+	Width int
+}
+
+const LINE_SPLIT = "\n"
+
 func ClipView(s string, x, y, width, height int) string {
 	atablelist, raw := GetANSIs(s)
-	lines := strings.Split(raw, "\n")
-	sublines := make([]*SubLine, len(lines))
+	rawlines := strings.Split(raw, LINE_SPLIT)
+	sublines := make([]*SubLine, len(rawlines))
 	index := 0
-	for i, v := range lines {
-		lastIndex := index + len(v)
+	for i, v := range rawlines {
+		data := (&RuneDataList{}).Init(v)
+		lastIndex := index + len(data.L)
 		sublines[i] = &SubLine{
 			Bound: [2]int{index, lastIndex},
-			Data:  v,
+			Data:  data,
 		}
 		index = lastIndex + 1
 	}
-	slice := api.SliceFrom(sublines, y, y+height)
+	lines := api.SliceFrom(sublines, y, y+height)
 	var buf strings.Builder
 	buf.Grow((width + 1) * height)
-	for _, sl := range slice {
-		atables := atablelist.GetSlice(sl.Bound[0], sl.Bound[1])
-		index := 0
-		for _, a := range atables {
-			startIndex := a.Bound[0] - sl.Bound[0]
-			endIndex := a.Bound[1] - sl.Bound[0]
+	// lines
+	for _, sl := range lines {
+		if len(sl.Data)-1 >= x {
+			index := 0
+			// lineSlice := sl.Data[x:]
+			// atable slice
+			atables := atablelist.GetSlice(sl.Bound[0], sl.Bound[1])
+			// every table
+			for _, a := range atables {
+				// table's sub tables
+				temp := a
+				endIndex := temp.Bound[1] - sl.Bound[0]
+				for temp != nil {
+					startIndex := temp.Bound[0] - sl.Bound[0]
+					// before table startIndex
+					if startIndex > index {
+						normalSubString := sl.Data[index:startIndex]
+						buf.Write(normalSubString)
+						index += len(normalSubString)
+					}
+					// ansi insert
+					buf.Write(temp.Data)
+					// assign sub table
+					temp = a.Sub
+				}
+				// add rest
+				normalSubString := sl.Data[index:endIndex]
+				buf.Write(normalSubString)
+				index += len(normalSubString)
+				// add end escape
+				buf.WriteString(ESCAPE_SEQUENCE_END)
+			}
+			// add rest
+			if index < len(sl.Data)-1 {
+				buf.Write(sl.Data[index:])
+			}
 		}
-		fmt.Println(atables)
+		// line break
+		buf.WriteString(LINE_SPLIT)
 	}
-	return ""
+	return buf.String()
+}
+
+func clipLines(lines []*SubLine, atablelist *ANSITableList, x, y, width, height int) {
+	var buf strings.Builder
+	buf.Grow((width + 1) * height)
+	// lines
+	for _, sl := range lines {
+		// if x is within the width of line
+		if sl.Data.TotalWidth-1 >= x {
+			// for range every rune and count width
+
+			// NOTE: ignored code down below
+			index := 0
+			// lineSlice := sl.Data[x:]
+			// atable slice
+			atables := atablelist.GetSlice(sl.Bound[0], sl.Bound[1])
+			// every table
+			for _, a := range atables {
+				// table's sub tables
+				temp := a
+				endIndex := temp.Bound[1] - sl.Bound[0]
+				for temp != nil {
+					startIndex := temp.Bound[0] - sl.Bound[0]
+					// before table startIndex
+					if startIndex > index {
+						normalSubString := sl.Data[index:startIndex]
+						buf.Write(normalSubString)
+						index += len(normalSubString)
+					}
+					// ansi insert
+					buf.Write(temp.Data)
+					// assign sub table
+					temp = a.Sub
+				}
+				// add rest
+				normalSubString := sl.Data[index:endIndex]
+				buf.Write(normalSubString)
+				index += len(normalSubString)
+				// add end escape
+				buf.WriteString(ESCAPE_SEQUENCE_END)
+			}
+			// add rest
+			if index < len(sl.Data)-1 {
+				buf.Write(sl.Data[index:])
+			}
+		}
+		// line break
+		buf.WriteString(LINE_SPLIT)
+	}
 }
