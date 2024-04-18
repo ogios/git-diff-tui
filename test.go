@@ -64,7 +64,7 @@ func clipviewTest() {
 	fmt.Println("\nOprations")
 
 	start = time.Now()
-	res := comp.ClipView(a.String(), 14, 3, 50, 10)
+	res := comp.ClipView(a.String(), 26, 2, 50, 10)
 	fmt.Println(res)
 	fmt.Println("cost:", time.Now().UnixMicro()-start.UnixMicro())
 }

@@ -26,7 +26,7 @@ type ANSITableList struct {
 	L []BoundsStruct
 }
 
-type ANSIStackItem struct {
+type ANSIQueueItem struct {
 	data       []byte
 	startIndex int
 }
@@ -43,7 +43,7 @@ func GetANSIs(s string) (*ANSITableList, string) {
 
 	// preserve ansi string and position
 	tables := make([]BoundsStruct, 0)
-	ansiStack := make([]*ANSIStackItem, 0)
+	ansiQueue := make([]*ANSIQueueItem, 0)
 	ansi := false
 	// NOTE: do not use `for range string` index since it's not i+=1 but i+=byte_len
 	// solution: transform s into []rune or use custom variable for index
@@ -56,14 +56,14 @@ func GetANSIs(s string) (*ANSITableList, string) {
 			// but maybe just byte(v) is enough since ansi only contains rune of one byte?
 			byteData := []byte{}
 			byteData = utf8.AppendRune(byteData, v)
-			ansiStack = append(ansiStack, &ANSIStackItem{
+			ansiQueue = append(ansiQueue, &ANSIQueueItem{
 				startIndex: i,
 				data:       byteData,
 			})
 		} else {
 			// in ansi sequence content
 			if ansi {
-				last := ansiStack[len(ansiStack)-1]
+				last := ansiQueue[len(ansiQueue)-1]
 				last.data = utf8.AppendRune(last.data, v)
 				// last.data = append(last.data, byte(v))
 				// end of an ansi sequence. terminate
@@ -71,13 +71,13 @@ func GetANSIs(s string) (*ANSITableList, string) {
 					ansi = false
 					// clip cap
 					last.data = slices.Clip(last.data)
-					// ends all ansi sequences in stack
+					// ends all ansi sequences in queue
 					if string(last.data) == ESCAPE_SEQUENCE_END {
-						if len(ansiStack) > 1 {
-							table := stackToTable(ansiStack[:len(ansiStack)-1], i)
+						if len(ansiQueue) > 1 {
+							table := queueToTable(ansiQueue[:len(ansiQueue)-1], i)
 							tables = append(tables, table)
 						}
-						ansiStack = make([]*ANSIStackItem, 0)
+						ansiQueue = make([]*ANSIQueueItem, 0)
 					}
 				}
 			} else {
@@ -92,8 +92,8 @@ func GetANSIs(s string) (*ANSITableList, string) {
 	}, normalString.String()
 }
 
-func stackToTable(stack []*ANSIStackItem, endIndex int) *ANSITable {
-	first := stack[0]
+func queueToTable(queue []*ANSIQueueItem, endIndex int) *ANSITable {
+	first := queue[0]
 	root := &ANSITable{
 		Bound: [2]int{
 			first.startIndex,
@@ -102,7 +102,7 @@ func stackToTable(stack []*ANSIStackItem, endIndex int) *ANSITable {
 		Data: first.data,
 	}
 	temp := root
-	for _, v := range stack[1:] {
+	for _, v := range queue[1:] {
 		temp.Sub = &ANSITable{
 			Bound: [2]int{
 				v.startIndex,
@@ -123,6 +123,7 @@ const (
 // var EMPTY_ANSITABLELIST = make([]*ANSITable, 0)
 var EMPTY_ANSITABLELIST = make([]BoundsStruct, 0)
 
+// get a slice of ansi table, it will find all tables between `startIndex` and `endIndex`
 func (a *ANSITableList) GetSlice(startIndex, endIndex int) []BoundsStruct {
 	if len(a.L) == 0 {
 		return a.L
@@ -130,6 +131,9 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []BoundsStruct {
 	var start, end int
 	temp := search(a.L, startIndex)
 	fmt.Println("start temp:", temp)
+	// len == 1 means index within a specific table
+	// len == 2 means index between two tables, and for `startIndex` we only need the tables after `startIndex`
+	// temp[1] == -1 means already at the front of tablelist and no matchs
 	if len(temp) == 1 {
 		start = temp[0]
 	} else if len(temp) == 2 {
@@ -142,6 +146,9 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []BoundsStruct {
 
 	temp = search(a.L, endIndex)
 	fmt.Println("end temp:", temp)
+	// len == 1 means index within a specific table
+	// len == 2 means index between two tables, and for `endIndex` we only need the tables before `endIndex`
+	// temp[1] == -1 means already at the front of tablelist and no matchs
 	if len(temp) == 1 {
 		end = temp[0]
 	} else if len(temp) == 2 {
@@ -153,11 +160,11 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []BoundsStruct {
 	}
 	fmt.Println("start and end index:", start, end)
 
+	// get slice of tablelist between start and end
 	return a.L[start : end+1]
 }
 
 type SubLine struct {
-	// Data  []byte
 	Data  *RuneDataList
 	Bound [2]int
 }
@@ -167,9 +174,14 @@ type RuneDataList struct {
 	TotalWidth int
 }
 
+// init RuneData list given runes
+//
+// RuneDataList can only be set with this function, no more process allowed afterwards
 func (r *RuneDataList) Init(s []rune) *RuneDataList {
 	r.L = make([]BoundsStruct, len(s))
 	visibleIndex := 0
+	// for every rune, get its width, start and end index refers to the visible line
+	// and save rune data into bytes
 	for i, v := range s {
 		bs := []byte{}
 		bs = utf8.AppendRune(bs, v)
@@ -240,7 +252,7 @@ func clipLines(lines []*SubLine, atablelist *ANSITableList, x, y, width, height 
 			}
 			lineRunes := sl.Data.L[start : end+1]
 			fmt.Println("indexes:", start, end)
-			fmt.Println("lineRunes:", lineRunes)
+			fmt.Println("lineRunes:", lineRunes, lineRunes[0])
 
 			// start from lineRunes start
 			index := 0
@@ -280,7 +292,7 @@ func clipLines(lines []*SubLine, atablelist *ANSITableList, x, y, width, height 
 				buf.WriteString(ESCAPE_SEQUENCE_END)
 			}
 			// add rest
-			if index < len(lineRunes)-1 {
+			if index <= len(lineRunes)-1 {
 				// buf.Write(lineRunes[index:])
 				subRuneDatas := lineRunes[index:]
 				for _, runeData := range subRuneDatas {
