@@ -11,13 +11,12 @@ import (
 )
 
 type ANSITable struct {
-	Sub  *ANSITable
-	Data []byte
-
-	// rune index
-	Bound [2]int
+	Sub   *ANSITable
+	Data  []byte
+	Bound [2]int // rune index
 }
 
+// implement `BoundsStruct` for search
 func (a *ANSITable) getBounds() [2]int {
 	return a.Bound
 }
@@ -36,6 +35,7 @@ const (
 	ESCAPE_SEQUENCE_END = string(ESCAPE_SEQUENCE) + "[0m"
 )
 
+// split `string with ansi` into `ansi sequences` and `raw string`
 func GetANSIs(s string) (*ANSITableList, string) {
 	// preserve normal string
 	var normalString strings.Builder
@@ -45,12 +45,13 @@ func GetANSIs(s string) (*ANSITableList, string) {
 	tables := make([]BoundsStruct, 0)
 	ansiQueue := make([]*ANSIQueueItem, 0)
 	ansi := false
-	// NOTE: do not use `for range string` index since it's not i+=1 but i+=byte_len
+	// NOTE: do not use `for i := range string` index since it's not i+=1 but i+=byte_len
 	// solution: transform s into []rune or use custom variable for index
 	i := 0
 	for _, v := range s {
-		// met `esc` char
+		// meet `esc` char
 		if v == ESCAPE_SEQUENCE {
+			// enable ansi mode until meet 'm'
 			ansi = true
 			// using utf8 rune function
 			// but maybe just byte(v) is enough since ansi only contains rune of one byte?
@@ -58,25 +59,26 @@ func GetANSIs(s string) (*ANSITableList, string) {
 			byteData = utf8.AppendRune(byteData, v)
 			ansiQueue = append(ansiQueue, &ANSIQueueItem{
 				startIndex: i,
-				data:       byteData,
+				data:       slices.Clip(byteData),
 			})
 		} else {
-			// in ansi sequence content
+			// in ansi sequence content mode
 			if ansi {
 				last := ansiQueue[len(ansiQueue)-1]
 				last.data = utf8.AppendRune(last.data, v)
-				// last.data = append(last.data, byte(v))
 				// end of an ansi sequence. terminate
 				if v == 'm' {
 					ansi = false
 					// clip cap
 					last.data = slices.Clip(last.data)
-					// ends all ansi sequences in queue
+					// ends all ansi sequences in queue and create ansi table
 					if string(last.data) == ESCAPE_SEQUENCE_END {
+						// skip if ansi queue only contain "[0m", which means no ansi actually working
 						if len(ansiQueue) > 1 {
 							table := queueToTable(ansiQueue[:len(ansiQueue)-1], i)
 							tables = append(tables, table)
 						}
+						// reset queue
 						ansiQueue = make([]*ANSIQueueItem, 0)
 					}
 				}
@@ -88,10 +90,11 @@ func GetANSIs(s string) (*ANSITableList, string) {
 		}
 	}
 	return &ANSITableList{
-		L: tables,
+		L: slices.Clip(tables),
 	}, normalString.String()
 }
 
+// transform queue into ansi table which contains all ansi sequences from start to end
 func queueToTable(queue []*ANSIQueueItem, endIndex int) *ANSITable {
 	first := queue[0]
 	root := &ANSITable{
@@ -101,6 +104,8 @@ func queueToTable(queue []*ANSIQueueItem, endIndex int) *ANSITable {
 		},
 		Data: first.data,
 	}
+
+	// add to sub
 	temp := root
 	for _, v := range queue[1:] {
 		temp.Sub = &ANSITable{
