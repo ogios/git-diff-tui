@@ -18,8 +18,12 @@ type ANSITable struct {
 	Bound [2]int
 }
 
+func (a *ANSITable) getBounds() [2]int {
+	return a.Bound
+}
+
 type ANSITableList struct {
-	L []*ANSITable
+	L []BoundsStruct
 }
 
 type ANSIStackItem struct {
@@ -32,15 +36,17 @@ const (
 	ESCAPE_SEQUENCE_END = string(ESCAPE_SEQUENCE) + "[0m"
 )
 
-func GetANSIs(s string) (ANSITableList, string) {
+func GetANSIs(s string) (*ANSITableList, string) {
 	// preserve normal string
 	var normalString strings.Builder
 	normalString.Grow(len(s))
 
 	// preserve ansi string and position
-	tables := make([]*ANSITable, 0)
+	tables := make([]BoundsStruct, 0)
 	ansiStack := make([]*ANSIStackItem, 0)
 	ansi := false
+	// NOTE: do not use `for range string` index since it's not i+=1 but i+=byte_len
+	// solution: transform s into []rune or use custom variable for index
 	i := 0
 	for _, v := range s {
 		// met `esc` char
@@ -81,7 +87,7 @@ func GetANSIs(s string) (ANSITableList, string) {
 			}
 		}
 	}
-	return ANSITableList{
+	return &ANSITableList{
 		L: tables,
 	}, normalString.String()
 }
@@ -114,9 +120,10 @@ const (
 	MODE_END   = 1
 )
 
-var EMPTY_ANSITABLELIST = make([]*ANSITable, 0)
+// var EMPTY_ANSITABLELIST = make([]*ANSITable, 0)
+var EMPTY_ANSITABLELIST = make([]BoundsStruct, 0)
 
-func (a *ANSITableList) GetSlice(startIndex, endIndex int) []*ANSITable {
+func (a *ANSITableList) GetSlice(startIndex, endIndex int) []BoundsStruct {
 	if len(a.L) == 0 {
 		return a.L
 	}
@@ -149,70 +156,6 @@ func (a *ANSITableList) GetSlice(startIndex, endIndex int) []*ANSITable {
 	return a.L[start : end+1]
 }
 
-func search(list []*ANSITable, pos int) []int {
-	listLen := len(list)
-	i := (listLen - 1) / 2
-	step := i
-	halfStep := func() {
-		step /= 2
-		if step == 0 {
-			step = 1
-		}
-	}
-	halfStep()
-	// 1. index between one bounds start & end
-	// or
-	// 2.between ( last end and current start ) or ( current end and next start )
-	for {
-		// fmt.Println("for round:", i)
-		v := list[i]
-		// between bounds
-		if v.Bound[0] <= pos && v.Bound[1] > pos {
-			return []int{i}
-		} else {
-			// smaller than start
-			if pos < v.Bound[0] {
-				if i > 0 {
-					// not the first one
-					prev := list[i-1]
-					if prev.Bound[1] <= pos {
-						// i bigger than prev end and i smaller than current start means circumstance 2
-						return []int{i - 1, i}
-					} else {
-						// i smaller than prev end means still space to go left
-						// i = i - int(math.Floor(float64(i)/2))
-						i -= step
-						halfStep()
-					}
-				} else {
-					// first one and i smaller than first start means circumstance 2
-					return []int{-1, i}
-				}
-			} else if pos >= v.Bound[1] {
-				// bigger than end
-				if i < listLen-1 {
-					// not the last one
-					next := list[i+1]
-					if pos < next.Bound[0] {
-						// i bigger than current end and smaller than next start means circumstance 2
-						return []int{i, i + 1}
-					} else {
-						// i bigger or equal to next start means still space to go right
-						// i = i + int(math.Ceil(float64(i)/2))
-						// i = i + int(math.Floor(float64(listLen-i)/2))
-						i += step
-						halfStep()
-					}
-				} else {
-					// last one and i bigger than end means circumstance 2
-					// return []int{i, i + 1}
-					return []int{i, -1}
-				}
-			}
-		}
-	}
-}
-
 type SubLine struct {
 	// Data  []byte
 	Data  *RuneDataList
@@ -220,39 +163,50 @@ type SubLine struct {
 }
 
 type RuneDataList struct {
-	L          []*RuneData
+	L          []BoundsStruct
 	TotalWidth int
 }
 
-func (r *RuneDataList) Init(s string) *RuneDataList {
-	r.L = make([]*RuneData, len(s))
+func (r *RuneDataList) Init(s []rune) *RuneDataList {
+	r.L = make([]BoundsStruct, len(s))
+	visibleIndex := 0
 	for i, v := range s {
 		bs := []byte{}
-		utf8.AppendRune(bs, v)
+		bs = utf8.AppendRune(bs, v)
 		w := runewidth.RuneWidth(v)
 		r.L[i] = &RuneData{
 			Byte:  slices.Clip(bs),
-			Width: w,
+			Bound: [2]int{visibleIndex, visibleIndex + w},
 		}
 		r.TotalWidth += w
+		visibleIndex += w
 	}
 	return r
 }
 
 type RuneData struct {
 	Byte  []byte
-	Width int
+	Bound [2]int // refers to the visible width
+}
+
+func (r *RuneData) getBounds() [2]int {
+	return r.Bound
 }
 
 const LINE_SPLIT = "\n"
 
+var SPACE_HODLER = []byte(" ")
+
 func ClipView(s string, x, y, width, height int) string {
 	atablelist, raw := GetANSIs(s)
+	for _, v := range atablelist.L {
+		fmt.Println("table: ", v)
+	}
 	rawlines := strings.Split(raw, LINE_SPLIT)
 	sublines := make([]*SubLine, len(rawlines))
 	index := 0
 	for i, v := range rawlines {
-		data := (&RuneDataList{}).Init(v)
+		data := (&RuneDataList{}).Init([]rune(v))
 		lastIndex := index + len(data.L)
 		sublines[i] = &SubLine{
 			Bound: [2]int{index, lastIndex},
@@ -261,96 +215,85 @@ func ClipView(s string, x, y, width, height int) string {
 		index = lastIndex + 1
 	}
 	lines := api.SliceFrom(sublines, y, y+height)
-	var buf strings.Builder
-	buf.Grow((width + 1) * height)
-	// lines
-	for _, sl := range lines {
-		if len(sl.Data)-1 >= x {
-			index := 0
-			// lineSlice := sl.Data[x:]
-			// atable slice
-			atables := atablelist.GetSlice(sl.Bound[0], sl.Bound[1])
-			// every table
-			for _, a := range atables {
-				// table's sub tables
-				temp := a
-				endIndex := temp.Bound[1] - sl.Bound[0]
-				for temp != nil {
-					startIndex := temp.Bound[0] - sl.Bound[0]
-					// before table startIndex
-					if startIndex > index {
-						normalSubString := sl.Data[index:startIndex]
-						buf.Write(normalSubString)
-						index += len(normalSubString)
-					}
-					// ansi insert
-					buf.Write(temp.Data)
-					// assign sub table
-					temp = a.Sub
-				}
-				// add rest
-				normalSubString := sl.Data[index:endIndex]
-				buf.Write(normalSubString)
-				index += len(normalSubString)
-				// add end escape
-				buf.WriteString(ESCAPE_SEQUENCE_END)
-			}
-			// add rest
-			if index < len(sl.Data)-1 {
-				buf.Write(sl.Data[index:])
-			}
-		}
-		// line break
-		buf.WriteString(LINE_SPLIT)
-	}
-	return buf.String()
+	fmt.Println(lines, lines[0].Data)
+	clipLines(lines, atablelist, x, y, width, height)
+	return ""
 }
 
 func clipLines(lines []*SubLine, atablelist *ANSITableList, x, y, width, height int) {
 	var buf strings.Builder
 	buf.Grow((width + 1) * height)
 	// lines
-	for _, sl := range lines {
+	for lineIndex, sl := range lines {
 		// if x is within the width of line
 		if sl.Data.TotalWidth-1 >= x {
-			// for range every rune and count width
+			// (x) for range every rune and count width
+			// (✓) binary search for a range of rune
+			var start, end int
+			temp := search(sl.Data.L, x)
+			start = temp[0]
+			temp = search(sl.Data.L, x+width)
+			if len(temp) == 1 {
+				end = temp[0]
+			} else if len(temp) == 2 {
+				end = temp[0]
+			}
+			lineRunes := sl.Data.L[start : end+1]
+			fmt.Println("indexes:", start, end)
+			fmt.Println("lineRunes:", lineRunes)
 
-			// NOTE: ignored code down below
+			// start from lineRunes start
 			index := 0
-			// lineSlice := sl.Data[x:]
 			// atable slice
-			atables := atablelist.GetSlice(sl.Bound[0], sl.Bound[1])
+			atables := atablelist.GetSlice(start+sl.Bound[0], end+sl.Bound[0])
+			fmt.Println("tables:", atables)
 			// every table
 			for _, a := range atables {
 				// table's sub tables
-				temp := a
-				endIndex := temp.Bound[1] - sl.Bound[0]
+				temp := a.(*ANSITable)
+				fmt.Println("temp table:", temp)
+				endIndex := temp.Bound[1] - sl.Bound[0] - start
 				for temp != nil {
-					startIndex := temp.Bound[0] - sl.Bound[0]
+					startIndex := temp.Bound[0] - sl.Bound[0] - start
 					// before table startIndex
 					if startIndex > index {
-						normalSubString := sl.Data[index:startIndex]
-						buf.Write(normalSubString)
-						index += len(normalSubString)
+						subRuneDatas := lineRunes[index:startIndex]
+						for _, runeData := range subRuneDatas {
+							r := runeData.(*RuneData)
+							buf.Write(r.Byte)
+						}
+						index += len(subRuneDatas)
 					}
 					// ansi insert
 					buf.Write(temp.Data)
 					// assign sub table
-					temp = a.Sub
+					temp = temp.Sub
 				}
 				// add rest
-				normalSubString := sl.Data[index:endIndex]
-				buf.Write(normalSubString)
-				index += len(normalSubString)
+				subRuneDatas := lineRunes[index:endIndex]
+				for _, runeData := range subRuneDatas {
+					r := runeData.(*RuneData)
+					buf.Write(r.Byte)
+				}
+				index += len(subRuneDatas)
 				// add end escape
 				buf.WriteString(ESCAPE_SEQUENCE_END)
 			}
 			// add rest
-			if index < len(sl.Data)-1 {
-				buf.Write(sl.Data[index:])
+			if index < len(lineRunes)-1 {
+				// buf.Write(lineRunes[index:])
+				subRuneDatas := lineRunes[index:]
+				for _, runeData := range subRuneDatas {
+					r := runeData.(*RuneData)
+					buf.Write(r.Byte)
+				}
 			}
 		}
 		// line break
-		buf.WriteString(LINE_SPLIT)
+		if lineIndex < len(lines)-1 {
+			buf.WriteString(LINE_SPLIT)
+		}
 	}
+	fmt.Println(buf.String())
+	fmt.Println("done")
 }

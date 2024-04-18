@@ -34,20 +34,22 @@ func main() {
 	// os.WriteFile("test1.log", []byte(shit), 0766)
 
 	// boundsTest()
-	// clipviewTest()
-	getANSITest()
+	clipviewTest()
+	// getANSITest()
 }
 
 func getANSITest() {
 	b := `一二三四`
 	s := b + currentLineSelectedStyle.Render(b) + currentLineSelectedStyle.Render(b) + b + "\n"
+	start := time.Now()
 	table, raw := comp.GetANSIs(s)
+	fmt.Println("cost:", time.Now().UnixMicro()-start.UnixMicro())
 	fmt.Println(table.L[0], table.L[1], raw)
 }
 
 func clipviewTest() {
-	b := `0123456789`
-	s := b + currentLineSelectedStyle.Render(b) + currentLineSelectedStyle.Render(b) + b + "\n"
+	b := `12三四`
+	s := b + currentLineNormalStyle.Render(b) + currentLineSelectedStyle.Render(b) + b + "\n"
 	start := time.Now()
 	var a strings.Builder
 	a.Grow(len(s) * 4)
@@ -59,8 +61,10 @@ func clipviewTest() {
 
 	fmt.Printf("original:\n%s\n", a.String())
 
+	fmt.Println("\nOprations")
+
 	start = time.Now()
-	res := comp.ClipView(a.String(), 2, 2, 10, 10)
+	res := comp.ClipView(a.String(), 14, 3, 50, 10)
 	fmt.Println(res)
 	fmt.Println("cost:", time.Now().UnixMicro()-start.UnixMicro())
 }
