@@ -238,8 +238,6 @@ func DrawNode(n *api.Node, level int) []*NodeLine {
 		text.WriteString(strings.Repeat(INDENT, level))
 		if n.Type == api.NODE_DIR {
 			text.WriteString("▸")
-		} else {
-			text.WriteString("⋅")
 		}
 		text.WriteString(n.Name)
 		ls = append(ls, &NodeLine{
