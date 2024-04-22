@@ -1,6 +1,7 @@
 package left
 
 import (
+	"log"
 	"slices"
 	"strings"
 
@@ -49,6 +50,7 @@ var (
 func NewTreeModel(n *api.Node, block [2]int) tea.Model {
 	// block[1] -= 2
 	lines := DrawNode(n, 0)
+	log.Println("new tree", block)
 	t := &TreeModel{
 		Root:             n,
 		Lines:            lines,
@@ -204,6 +206,7 @@ func (t *TreeModel) View() string {
 	var s strings.Builder
 	startLine := t.CurrentViewIndex[1]
 	endLine := startLine + t.Block[1]
+	log.Println(startLine, t.Block, endLine, t.CurrentViewIndex)
 	visibleLines := api.SliceFrom(t.Lines, startLine, endLine)
 	for i := range visibleLines {
 		input := func() string {

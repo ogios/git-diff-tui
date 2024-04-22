@@ -18,8 +18,10 @@ type CommentsModel struct {
 
 var commentIdentifierStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#5575e6"))
+var commentBlockStyle lipgloss.Style
 
 func NewCommentsModel(block [2]int) tea.Model {
+	commentBlockStyle = lipgloss.NewStyle().Width(block[0]).Height(block[1])
 	view := &CommentsModel{
 		v: cropviewport.NewCropViewportModel(),
 		cache: api.NewContentCacher(func(k string) *api.ContentData {
@@ -40,6 +42,7 @@ func NewCommentsModel(block [2]int) tea.Model {
 			}
 		}),
 	}
+	view.v.(*cropviewport.CropViewportModel).SetBlock(0, 0, block[0], block[1])
 	return view
 }
 
@@ -62,5 +65,5 @@ func (c *CommentsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c *CommentsModel) View() string {
-	return c.v.View()
+	return commentBlockStyle.Render(c.v.View())
 }

@@ -48,7 +48,7 @@ func NewHomeModel() *HomeModel {
 		BorderForeground(lipgloss.Color("#ff5b00"))
 
 	modelCount := 3
-	modelsHeight := h - 3
+	modelsHeight := h - 1
 	modelsWidth := w - 2*modelCount
 	getModelWidth := func() func(per float64) int {
 		count := modelCount
@@ -66,16 +66,16 @@ func NewHomeModel() *HomeModel {
 	}()
 	ms := []tea.Model{
 		NewTreeModel(GetTreeNodes(), [2]int{
-			getModelWidth(0.2) - 8,
-			modelsHeight - 2,
+			getModelWidth(0.2),
+			modelsHeight,
 		}),
 		NewViewModel([2]int{
-			getModelWidth(0.4) - 8,
-			modelsHeight - 2,
+			getModelWidth(0.4),
+			modelsHeight,
 		}),
 		NewCommentsModel([2]int{
-			getModelWidth(0.4) - 8,
-			modelsHeight - 2,
+			getModelWidth(0.4),
+			modelsHeight,
 		}),
 	}
 
@@ -151,5 +151,6 @@ func (m *HomeModel) View() string {
 			ms...,
 		),
 	)
-	return homeStyle.Render(v)
+	// return homeStyle.Render(v)
+	return v
 }

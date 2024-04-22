@@ -24,8 +24,10 @@ var errorMsg = lipgloss.NewStyle().
 	Inline(true).
 	Background(lipgloss.Color("#ff2f5a")).
 	Foreground(lipgloss.Color("#000000"))
+var viewBlockStyle lipgloss.Style
 
 func NewViewModel(block [2]int) tea.Model {
+	viewBlockStyle = lipgloss.NewStyle().Width(block[0]).Height(block[1])
 	view := &ViewModel{
 		v: cropviewport.NewCropViewportModel(),
 		cache: api.NewContentCacher(func(p string) *api.ContentData {
@@ -54,6 +56,7 @@ func NewViewModel(block [2]int) tea.Model {
 			}
 		}),
 	}
+	view.v.(*cropviewport.CropViewportModel).SetBlock(0, 0, block[0], block[1])
 	return view
 }
 
@@ -79,5 +82,5 @@ func (v *ViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (v *ViewModel) View() string {
-	return v.v.View()
+	return viewBlockStyle.Render(v.v.View())
 }
