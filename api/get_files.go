@@ -2,6 +2,8 @@ package api
 
 import (
 	"os"
+
+	"github.com/ogios/cropviewport/process"
 )
 
 func ReadFile(p string) ([]byte, error) {
@@ -12,12 +14,12 @@ func GetGitFile(hash, p string) (string, error) {
 	return ExecCmd("git", "show", hash+":"+p)
 }
 
-type StringCacher struct {
-	pool map[string][]byte
-	new  func(p string) []byte
+type ContentCacher[T any] struct {
+	pool map[string]T
+	new  func(p string) T
 }
 
-func (c *StringCacher) Get(key string) []byte {
+func (c *ContentCacher[T]) Get(key string) T {
 	if s, ok := c.pool[key]; ok {
 		return s
 	}
@@ -26,6 +28,11 @@ func (c *StringCacher) Get(key string) []byte {
 	return s
 }
 
-func NewStringCacher(new func(p string) []byte) *StringCacher {
-	return &StringCacher{pool: map[string][]byte{}, new: new}
+func NewContentCacher[T any](new func(p string) T) *ContentCacher[T] {
+	return &ContentCacher[T]{pool: map[string]T{}, new: new}
+}
+
+type ContentData struct {
+	Table *process.ANSITableList
+	Lines []*process.SubLine
 }

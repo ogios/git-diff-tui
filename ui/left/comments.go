@@ -3,16 +3,17 @@ package left
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ogios/cropviewport"
+	"github.com/ogios/cropviewport/process"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/data"
 )
 
 type CommentsModel struct {
-	cache api.StringCacher
-	v     viewport.Model
+	cache *api.ContentCacher[*api.ContentData]
+	v     tea.Model
 }
 
 var commentIdentifierStyle = lipgloss.NewStyle().
@@ -20,8 +21,8 @@ var commentIdentifierStyle = lipgloss.NewStyle().
 
 func NewCommentsModel(block [2]int) tea.Model {
 	view := &CommentsModel{
-		v: viewport.New(block[0], block[1]),
-		cache: *api.NewStringCacher(func(k string) []byte {
+		v: cropviewport.NewCropViewportModel(),
+		cache: api.NewContentCacher(func(k string) *api.ContentData {
 			s := strings.Builder{}
 			content, err := data.GetDiffFileComment(k)
 			if err != nil {
@@ -32,7 +33,11 @@ func NewCommentsModel(block [2]int) tea.Model {
 				s.WriteString(v)
 				s.WriteString("\n")
 			}
-			return []byte(s.String())
+			at, sl := process.ProcessContent(s.String())
+			return &api.ContentData{
+				Table: at,
+				Lines: sl,
+			}
 		}),
 	}
 	return view
@@ -40,8 +45,10 @@ func NewCommentsModel(block [2]int) tea.Model {
 
 func (c *CommentsModel) ViewComment(f string) {
 	content := c.cache.Get(f)
-	c.v.SetContent(string(content))
-	c.v.GotoTop()
+	cv := c.v.(*cropviewport.CropViewportModel)
+	cv.SetContentGivenData(content.Table, content.Lines)
+	cv.BackToTop()
+	cv.BackToLeft()
 }
 
 func (c *CommentsModel) Init() tea.Cmd {

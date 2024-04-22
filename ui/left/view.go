@@ -6,16 +6,17 @@ import (
 
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/quick"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ogios/cropviewport"
+	"github.com/ogios/cropviewport/process"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/config"
 )
 
 type ViewModel struct {
-	cache api.StringCacher
-	v     viewport.Model
+	cache *api.ContentCacher[*api.ContentData]
+	v     tea.Model
 }
 
 var errorMsg = lipgloss.NewStyle().
@@ -26,23 +27,31 @@ var errorMsg = lipgloss.NewStyle().
 
 func NewViewModel(block [2]int) tea.Model {
 	view := &ViewModel{
-		v: viewport.New(block[0], block[1]),
-		cache: *api.NewStringCacher(func(k string) []byte {
-			content, err := api.GetGitFile(config.GlobalConfig.Hash2, k)
+		v: cropviewport.NewCropViewportModel(),
+		cache: api.NewContentCacher(func(p string) *api.ContentData {
+			var finalContent string
+			content, err := api.GetGitFile(config.GlobalConfig.Hash2, p)
 			if err != nil {
-				return []byte(errorMsg.Render(err.Error()))
+				finalContent = errorMsg.Render(err.Error())
+			} else {
+				buf := new(bytes.Buffer)
+				lex := lexers.Match(path.Base(p))
+				lang := "plaintext"
+				if lex != nil {
+					lang = lex.Config().Name
+				}
+				err = quick.Highlight(buf, content, lang, "terminal16m", "catppuccin-mocha")
+				if err != nil {
+					finalContent = errorMsg.Render(err.Error())
+				} else {
+					finalContent = buf.String()
+				}
 			}
-			buf := new(bytes.Buffer)
-			lex := lexers.Match(path.Base(k))
-			lang := "plaintext"
-			if lex != nil {
-				lang = lex.Config().Name
+			at, sl := process.ProcessContent(finalContent)
+			return &api.ContentData{
+				Table: at,
+				Lines: sl,
 			}
-			err = quick.Highlight(buf, content, lang, "terminal16m", "catppuccin-mocha")
-			if err != nil {
-				return []byte(errorMsg.Render(err.Error()))
-			}
-			return buf.Bytes()
 		}),
 	}
 	return view
@@ -50,8 +59,10 @@ func NewViewModel(block [2]int) tea.Model {
 
 func (v *ViewModel) ViewFile(p string) {
 	content := v.cache.Get(p)
-	v.v.SetContent(string(content))
-	v.v.GotoTop()
+	cv := v.v.(*cropviewport.CropViewportModel)
+	cv.SetContentGivenData(content.Table, content.Lines)
+	cv.BackToTop()
+	cv.BackToLeft()
 }
 
 func (v *ViewModel) Init() tea.Cmd {
