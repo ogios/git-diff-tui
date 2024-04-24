@@ -6,10 +6,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func CraeteLogger() *os.File {
-	loggerFile, err := tea.LogToFile("debug.log", "")
+var LoggerFile *os.File
+
+func initLog() {
+	f, err := tea.LogToFile("debug.log", "")
 	if err != nil {
 		panic(err)
 	}
-	return loggerFile
+	LoggerFile = f
+}
+
+func exitLog() {
+	LoggerFile.Close()
 }

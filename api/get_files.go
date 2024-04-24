@@ -10,7 +10,7 @@ func ReadFile(p string) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
-func GetGitFile(hash, p string) (string, error) {
+func GetGitFile(hash, p string) ([]byte, error) {
 	return ExecCmd("git", "show", hash+":"+p)
 }
 

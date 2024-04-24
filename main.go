@@ -11,17 +11,14 @@ import (
 	"github.com/ogios/merge-repo/config"
 	"github.com/ogios/merge-repo/data"
 	"github.com/ogios/merge-repo/template"
-	"github.com/ogios/merge-repo/ui/left"
+	uhome "github.com/ogios/merge-repo/ui/src/u-home"
 )
 
 func main() {
+	defer config.Exit()
+	defer data.Exit()
 	start := time.Now().UnixMilli()
 
-	// args
-	config.ParseArgs()
-
-	// commits & diffinfo
-	data.GetDiffFileInfo()
 	// html
 	GenDiffHTML()
 
@@ -67,11 +64,9 @@ func noUI() {
 func withUI() {
 	// p := left.NewHomeModel()
 	// fmt.Println(p.View())
-	logger := config.CraeteLogger()
-	defer logger.Close()
 
-	// data.PROGRAM = tea.NewProgram(left.NewHomeModel(), tea.WithAltScreen())
-	data.PROGRAM = tea.NewProgram(left.NewHomeModel(), func() func(p *tea.Program) {
+	// data.PROGRAM = tea.NewProgram(left.NewHomeModel(), func() func(p *tea.Program) {
+	data.PROGRAM = tea.NewProgram(uhome.NewHomeModel(), func() func(p *tea.Program) {
 		if config.GlobalConfig.AltScreen {
 			return tea.WithAltScreen()
 		}

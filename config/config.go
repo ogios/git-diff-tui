@@ -2,14 +2,16 @@ package config
 
 import (
 	"errors"
+	"log"
 	"os"
+	"time"
 
 	"github.com/ogios/merge-repo/api"
 )
 
 type Config struct {
-	Hash1, Hash2, Regex string
-	ShowUI, AltScreen   bool
+	Hash1, Hash2, Regex, DiffSrc string
+	ShowUI, AltScreen            bool
 }
 
 var GlobalConfig = Config{
@@ -18,11 +20,18 @@ var GlobalConfig = Config{
 	Regex:     "",
 	ShowUI:    true,
 	AltScreen: true,
+	DiffSrc:   "",
 }
 
-type ArgFunc = func(index int) int
+type grgFunc = func(index int) int
 
-func ParseArgs() {
+func initConfig() {
+	start := time.Now().UnixMicro()
+	parseArgs()
+	log.Println("init config cost:", time.Now().UnixMicro()-start)
+}
+
+func parseArgs() {
 	onlyReg := false
 	normalArgs := []string{}
 	i := 1
@@ -35,6 +44,9 @@ func ParseArgs() {
 		case "-r":
 			useRefLog()
 			onlyReg = true
+		case "-d":
+			i++
+			GlobalConfig.DiffSrc = os.Args[i]
 		default:
 			normalArgs = append(normalArgs, os.Args[i])
 		}
@@ -43,12 +55,12 @@ func ParseArgs() {
 
 	i = 0
 	if !onlyReg {
-		GlobalConfig.Hash1 = GetStrIfExist(normalArgs, i)
+		GlobalConfig.Hash1 = getStrIfExist(normalArgs, i)
 		i++
-		GlobalConfig.Hash2 = GetStrIfExist(normalArgs, i)
+		GlobalConfig.Hash2 = getStrIfExist(normalArgs, i)
 		i++
 	}
-	GlobalConfig.Regex = GetStrIfExist(normalArgs, i)
+	GlobalConfig.Regex = getStrIfExist(normalArgs, i)
 }
 
 func useRefLog() {
@@ -63,7 +75,7 @@ func useRefLog() {
 	GlobalConfig.Hash1 = cs[len(cs)-1]
 }
 
-func GetStrIfExist(l []string, i int) string {
+func getStrIfExist(l []string, i int) string {
 	if i >= len(l) {
 		return ""
 	}

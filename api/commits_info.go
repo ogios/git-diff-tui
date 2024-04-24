@@ -25,7 +25,7 @@ func GetCommitLog(hashes *[2]string) ([]string, error) {
 		"log",
 		"--pretty=format:%h%n%an%n%ci%n%s%n",
 	}
-	var o string
+	var o strings.Builder
 	if hashes != nil {
 		args := make([]string, len(baseArgs)+3)
 		copy(args, baseArgs)
@@ -39,7 +39,7 @@ func GetCommitLog(hashes *[2]string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("git log error: %v", err)
 		}
-		o += r
+		o.Write(r)
 
 		if hashes[0] != "" {
 			args[len(args)-3] = hashes[0]
@@ -49,16 +49,17 @@ func GetCommitLog(hashes *[2]string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("git log error: %v", err)
 			}
-			o = r + "\n" + o
+			o.Write(r)
+			o.WriteString("\n")
 		}
 	} else {
 		r, err := ExecCmd(baseArgs...)
 		if err != nil {
 			return nil, fmt.Errorf("git log error: %v", err)
 		}
-		o = r
+		o.Write(r)
 	}
-	rcs := strings.Split(strings.TrimSpace(o), "\n\n")
+	rcs := strings.Split(strings.TrimSpace(o.String()), "\n\n")
 	return rcs, nil
 }
 
@@ -68,7 +69,7 @@ func GetTags() map[string]string {
 	if err != nil {
 		return m
 	}
-	rt := strings.Split(strings.TrimSpace(o), "\n")
+	rt := strings.Split(strings.TrimSpace(string(o)), "\n")
 	for _, v := range rt {
 		ct := strings.Split(v, " ")
 		m[ct[0][:7]] = strings.Replace(ct[1], "refs/tags/", "", 1)
@@ -100,7 +101,7 @@ func GetCurrentBranch() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get current branch error: %v", err)
 	}
-	return strings.TrimSpace(o), nil
+	return strings.TrimSpace(string(o)), nil
 }
 
 func GetReflogCommit() ([]string, error) {

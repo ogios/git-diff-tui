@@ -19,7 +19,16 @@ var (
 	PROGRAM    *tea.Program
 )
 
-func GetCommits() {
+func initGlobal() {
+	p, err := api.ExecCmd("git", "rev-parse", "--show-toplevel")
+	if err != nil {
+		panic(err)
+	}
+	BASE_PATH = strings.TrimSpace(string(p))
+	getDiffFileInfo()
+}
+
+func getCommits() {
 	hashes := &[2]string{
 		config.GlobalConfig.Hash1, config.GlobalConfig.Hash2,
 	}
@@ -31,9 +40,9 @@ func GetCommits() {
 	log.Println(cs)
 }
 
-func GetDiffFileInfo() {
+func getDiffFileInfo() {
 	if COMMITS == nil {
-		GetCommits()
+		getCommits()
 	}
 	for i := 0; i < len(COMMITS)-1; i++ {
 		old := COMMITS[i]
@@ -48,18 +57,6 @@ func GetDiffFileInfo() {
 			DIFF_FILES[f] = append(DIFF_FILES[f], change)
 		}
 	}
-}
-
-func init() {
-	p, err := api.ExecCmd("git", "rev-parse", "--show-toplevel")
-	if err != nil {
-		panic(err)
-	}
-	BASE_PATH = strings.TrimSpace(p)
-}
-
-func CopyFiles(fs []string) {
-	api.CopyFiles(fs, BASE_PATH, "./copies")
 }
 
 func GetDiffFileComment(f string) ([]string, error) {
