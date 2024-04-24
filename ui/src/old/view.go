@@ -11,7 +11,7 @@ import (
 	"github.com/ogios/cropviewport"
 	"github.com/ogios/cropviewport/process"
 	"github.com/ogios/merge-repo/api"
-	"github.com/ogios/merge-repo/config"
+	"github.com/ogios/merge-repo/data"
 )
 
 type ViewModel struct {
@@ -32,7 +32,7 @@ func NewViewModel(block [2]int) tea.Model {
 		v: cropviewport.NewCropViewportModel(),
 		cache: api.NewContentCacher(func(p string) *api.ContentData {
 			var finalContent string
-			content, err := api.GetGitFile(config.GlobalConfig.Hash2, p)
+			content, err := data.GetTempDiffFile(p)
 			if err != nil {
 				finalContent = errorMsg.Render(err.Error())
 			} else {
@@ -42,7 +42,7 @@ func NewViewModel(block [2]int) tea.Model {
 				if lex != nil {
 					lang = lex.Config().Name
 				}
-				err = quick.Highlight(buf, content, lang, "terminal16m", "catppuccin-mocha")
+				err = quick.Highlight(buf, string(content), lang, "terminal16m", "catppuccin-mocha")
 				if err != nil {
 					finalContent = errorMsg.Render(err.Error())
 				} else {

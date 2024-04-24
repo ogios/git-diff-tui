@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ogios/merge-repo/api"
+	"github.com/ogios/merge-repo/data"
 	"golang.org/x/term"
 )
 
@@ -12,13 +14,29 @@ type UIData struct {
 	MaxHeight int
 }
 
-var GlobalUIData UIData
+var (
+	GlobalUIData UIData
+	TREE_NODE    *api.Node
+)
 
 func init() {
+	// ui data
 	w, h, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(w, h)
 	GlobalUIData = UIData{MaxWidth: w, MaxHeight: h}
+
+	// node
+	TREE_NODE = getTreeNodes()
+}
+
+func getTreeNodes() *api.Node {
+	var node *api.Node = nil
+	for k := range data.DIFF_FILES {
+		node = api.PathToNode(k, node)
+	}
+	fmt.Println(node)
+	return node
 }
