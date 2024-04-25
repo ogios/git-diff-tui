@@ -3,13 +3,14 @@ package uhome
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ogios/merge-repo/ui/comp"
+	udiffview "github.com/ogios/merge-repo/ui/src/u-diffview"
 	utree "github.com/ogios/merge-repo/ui/src/u-tree"
 	uview "github.com/ogios/merge-repo/ui/src/u-view"
 )
 
 type HomeDiff struct {
 	HomeCore
-	DiffView *DiffViewModel
+	DiffView *udiffview.DiffViewModel
 }
 
 func newHomeDiff() *HomeDiff {
@@ -29,7 +30,7 @@ func newHomeDiff() *HomeDiff {
 			getModelWidth(0.4),
 			modelsHeight,
 		}),
-		NewDiffViewModel([2]int{
+		udiffview.NewDiffViewModel([2]int{
 			getModelWidth(0.4),
 			modelsHeight,
 		}),
@@ -41,7 +42,7 @@ func newHomeDiff() *HomeDiff {
 			Tree:   ms[0],
 			Text:   ms[1].(*uview.ViewModel),
 		},
-		DiffView: ms[2].(*DiffViewModel),
+		DiffView: ms[2].(*udiffview.DiffViewModel),
 	}
 
 	return home
@@ -56,9 +57,11 @@ func (m *HomeDiff) Init() tea.Cmd {
 }
 
 func (m *HomeDiff) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cmds := make([]tea.Cmd, 0)
-	update(msg, &m.HomeCore)
-	return m, tea.Batch(cmds...)
+	switch msg := msg.(type) {
+	case utree.FileMsg:
+		m.DiffView.ViewFile(msg.FileRelPath)
+	}
+	return m, update(msg, &m.HomeCore)
 }
 
 func (m *HomeDiff) View() string {

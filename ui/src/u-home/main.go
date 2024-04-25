@@ -6,6 +6,7 @@ import (
 )
 
 func NewHomeModel() tea.Model {
+	resetStyle()
 	if config.GlobalConfig.DiffSrc == "" {
 		return newHome()
 	} else {

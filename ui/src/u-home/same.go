@@ -31,11 +31,11 @@ func resetStyle() {
 // type keyMap map[string]func(msg tea.Msg) tea.Cmd
 
 type HomeCore struct {
+	Tree            tea.Model
+	Text            *uview.ViewModel
 	CurrentFile     string
 	Models          []tea.Model
 	FocusModelIndex int
-	Tree            tea.Model
-	Text            *uview.ViewModel
 }
 
 func update(msg tea.Msg, m *HomeCore) tea.Cmd {

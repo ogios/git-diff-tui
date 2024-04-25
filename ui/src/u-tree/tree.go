@@ -206,7 +206,6 @@ func (t *Tree) View() string {
 	var s strings.Builder
 	startLine := t.CurrentViewIndex[1]
 	endLine := startLine + t.Block[1]
-	log.Println(startLine, t.Block, endLine, t.CurrentViewIndex)
 	visibleLines := api.SliceFrom(t.Lines, startLine, endLine)
 	for i := range visibleLines {
 		input := func() string {

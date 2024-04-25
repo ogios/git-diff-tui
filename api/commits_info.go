@@ -19,7 +19,7 @@ func parseCommits(raw string) Commit {
 	}
 }
 
-func GetCommitLog(hashes *[2]string) ([]string, error) {
+func getCommitLog(hashes *[2]string) ([]string, error) {
 	baseArgs := []string{
 		"git",
 		"log",
@@ -63,7 +63,7 @@ func GetCommitLog(hashes *[2]string) ([]string, error) {
 	return rcs, nil
 }
 
-func GetTags() map[string]string {
+func getTags() map[string]string {
 	o, err := ExecCmd("git", "show-ref", "--tags")
 	m := make(map[string]string)
 	if err != nil {
@@ -78,11 +78,11 @@ func GetTags() map[string]string {
 }
 
 func GetCommits(hashes *[2]string) ([]Commit, error) {
-	rcs, err := GetCommitLog(hashes)
+	rcs, err := getCommitLog(hashes)
 	if err != nil {
 		return nil, fmt.Errorf("git commit error: %v", err)
 	}
-	rts := GetTags()
+	rts := getTags()
 	cs := make([]Commit, len(rcs))
 	for i, v := range rcs {
 		v = strings.TrimSpace(v)
@@ -96,7 +96,7 @@ func GetCommits(hashes *[2]string) ([]Commit, error) {
 	return cs, nil
 }
 
-func GetCurrentBranch() (string, error) {
+func getCurrentBranch() (string, error) {
 	o, err := ExecCmd("git", "branch", "--show-current")
 	if err != nil {
 		return "", fmt.Errorf("get current branch error: %v", err)
@@ -105,7 +105,7 @@ func GetCurrentBranch() (string, error) {
 }
 
 func GetReflogCommit() ([]string, error) {
-	bn, err := GetCurrentBranch()
+	bn, err := getCurrentBranch()
 	if err != nil {
 		return nil, err
 	}

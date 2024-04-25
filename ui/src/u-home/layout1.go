@@ -64,9 +64,7 @@ func (m *Home) Init() tea.Cmd {
 }
 
 func (m *Home) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cmds := make([]tea.Cmd, 0)
-	update(msg, &m.HomeCore)
-	return m, tea.Batch(cmds...)
+	return m, update(msg, &m.HomeCore)
 }
 
 func (m *Home) View() string {

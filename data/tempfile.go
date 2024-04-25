@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/config"
@@ -22,17 +21,17 @@ func initTemp() {
 	}
 	TEMP_PATH = p
 	TEMP_DATA_PATH = path.Join(TEMP_PATH, "data")
-	pattern, err := regexp.Compile("^fatal: path '.*?' does not exist in '.*?'.*")
-	if err != nil {
-		panic(err)
-	}
+	// pattern, err := regexp.Compile("^fatal: path '.*?' does not exist in '.*?'.*")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	for p := range DIFF_FILES {
-		c, err := api.GetGitFile(config.GlobalConfig.Hash2, p)
+		c, err := getGitFile(config.GlobalConfig.Hash2, p)
 		if err != nil {
-			if !pattern.Match(c) {
-				panic(fmt.Errorf("error: init temp diff files: %s\n %v", string(c), err))
-			}
+			// if !pattern.Match(c) {
+			// 	panic(fmt.Errorf("error: init temp diff files: %s\n %v", string(c), err))
+			// }
 			continue
 		}
 		saveTempDiffFile(p, c)
@@ -58,6 +57,10 @@ func saveTempDiffFile(p string, data []byte) error {
 		return err
 	}
 	return nil
+}
+
+func getGitFile(hash, p string) ([]byte, error) {
+	return api.ExecCmd("git", "show", hash+":"+p)
 }
 
 func GetTempDiffFile(p string) ([]byte, error) {

@@ -1,18 +1,8 @@
 package api
 
 import (
-	"os"
-
 	"github.com/ogios/cropviewport/process"
 )
-
-func ReadFile(p string) ([]byte, error) {
-	return os.ReadFile(p)
-}
-
-func GetGitFile(hash, p string) ([]byte, error) {
-	return ExecCmd("git", "show", hash+":"+p)
-}
 
 type ContentCacher[T any] struct {
 	pool map[string]T
