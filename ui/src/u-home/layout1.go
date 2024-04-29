@@ -10,6 +10,7 @@ import (
 
 type Home struct {
 	HomeCore
+	comment tea.Model
 }
 
 func newHome() *Home {

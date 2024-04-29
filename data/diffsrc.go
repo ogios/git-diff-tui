@@ -9,13 +9,15 @@ import (
 )
 
 func initDiffsrc() {
-	e := errors.New("diff src dir not exist")
-	f, err := os.Stat(config.GlobalConfig.DiffSrc)
-	if err != nil {
-		panic(e)
-	}
-	if !f.IsDir() {
-		panic(e)
+	if config.GlobalConfig.DiffSrc != "" {
+		e := errors.New("diff src dir not exist")
+		f, err := os.Stat(config.GlobalConfig.DiffSrc)
+		if err != nil {
+			panic(e)
+		}
+		if !f.IsDir() {
+			panic(e)
+		}
 	}
 }
 

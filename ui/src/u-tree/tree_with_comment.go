@@ -40,6 +40,8 @@ func (t *TreeWithComment) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, nil
 			}
 		}
+	case FileMsg:
+		t.comment.(*ucomment.CommentsModel).ViewComment(msg.FileRelPath)
 	}
 	_, cmd := t.current.Update(msg)
 	return t, cmd
