@@ -9,8 +9,8 @@ import (
 )
 
 type HomeDiff struct {
-	HomeCore
 	DiffView *udiffview.DiffViewModel
+	HomeCore
 }
 
 func newHomeDiff() *HomeDiff {

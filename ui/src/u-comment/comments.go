@@ -6,14 +6,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ogios/cropviewport"
-	"github.com/ogios/cropviewport/process"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/data"
 	"github.com/ogios/merge-repo/ui/comp"
 )
 
 type CommentsModel struct {
-	cache *api.ContentCacher[*api.ContentData]
+	cache *api.ContentCacher[*comp.ContentData]
 	v     tea.Model
 }
 
@@ -25,7 +24,7 @@ func NewCommentsModel(block [2]int) tea.Model {
 	commentBlockStyle = lipgloss.NewStyle().Width(block[0]).Height(block[1])
 	view := &CommentsModel{
 		v: cropviewport.NewCropViewportModel(),
-		cache: api.NewContentCacher(func(k string) *api.ContentData {
+		cache: api.NewContentCacher(func(k string) *comp.ContentData {
 			s := strings.Builder{}
 			content, err := data.GetDiffFileComment(k)
 			if err != nil {
@@ -36,8 +35,8 @@ func NewCommentsModel(block [2]int) tea.Model {
 				s.WriteString(v)
 				s.WriteString("\n")
 			}
-			at, sl := process.ProcessContent(s.String())
-			return &api.ContentData{
+			at, sl := cropviewport.ProcessContent(s.String())
+			return &comp.ContentData{
 				Table: at,
 				Lines: sl,
 			}

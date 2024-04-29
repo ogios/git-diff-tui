@@ -7,8 +7,10 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/mattn/go-runewidth v0.0.15
-	github.com/ogios/cropviewport v0.1.2
-	github.com/ogios/go-diffcontext v0.2.4
+	github.com/muesli/termenv v0.15.2
+	github.com/ogios/ansisgr-process v0.1.3
+	github.com/ogios/cropviewport v0.2.3
+	github.com/ogios/go-diffcontext v0.3.3
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	golang.org/x/term v0.19.0
 )
@@ -23,7 +25,6 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect

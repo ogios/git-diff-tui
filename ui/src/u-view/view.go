@@ -9,14 +9,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ogios/cropviewport"
-	"github.com/ogios/cropviewport/process"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/data"
 	"github.com/ogios/merge-repo/ui/comp"
 )
 
 type ViewModel struct {
-	cache *api.ContentCacher[*api.ContentData]
+	cache *api.ContentCacher[*comp.ContentData]
 	v     tea.Model
 }
 
@@ -26,7 +25,7 @@ func NewViewModel(block [2]int) tea.Model {
 	viewBlockStyle = lipgloss.NewStyle().Width(block[0]).Height(block[1])
 	view := &ViewModel{
 		v: cropviewport.NewCropViewportModel(),
-		cache: api.NewContentCacher(func(p string) *api.ContentData {
+		cache: api.NewContentCacher(func(p string) *comp.ContentData {
 			var finalContent string
 			content, err := data.GetTempDiffFile(p)
 			if err != nil {
@@ -45,8 +44,8 @@ func NewViewModel(block [2]int) tea.Model {
 					finalContent = buf.String()
 				}
 			}
-			at, sl := process.ProcessContent(finalContent)
-			return &api.ContentData{
+			at, sl := cropviewport.ProcessContent(finalContent)
+			return &comp.ContentData{
 				Table: at,
 				Lines: sl,
 			}

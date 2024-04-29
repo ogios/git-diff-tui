@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	process "github.com/ogios/ansisgr-process"
+	"github.com/ogios/cropviewport"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/data"
 	"golang.org/x/term"
@@ -39,4 +41,9 @@ func getTreeNodes() *api.Node {
 	}
 	fmt.Println(node)
 	return node
+}
+
+type ContentData struct {
+	Table *process.ANSITableList
+	Lines []*cropviewport.SubLine
 }

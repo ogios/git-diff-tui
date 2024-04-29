@@ -11,6 +11,7 @@ import (
 	"github.com/ogios/merge-repo/config"
 	"github.com/ogios/merge-repo/data"
 	"github.com/ogios/merge-repo/template"
+	_ "github.com/ogios/merge-repo/ui/comp"
 	uhome "github.com/ogios/merge-repo/ui/src/u-home"
 )
 
@@ -62,10 +63,13 @@ func noUI() {
 
 // tui 未完成
 func withUI() {
-	// p := left.NewHomeModel()
+	// v := uview.NewViewModel([2]int{154, 37}).(*uview.ViewModel)
+	// v.ViewFile("README.md")
+	// fmt.Println(v.View())
+	// p := udiffview.NewDiffViewModel([2]int{154, 37}).(*udiffview.DiffViewModel)
+	// p.ViewFile("README.md")
 	// fmt.Println(p.View())
 
-	// data.PROGRAM = tea.NewProgram(left.NewHomeModel(), func() func(p *tea.Program) {
 	data.PROGRAM = tea.NewProgram(uhome.NewHomeModel(), func() func(p *tea.Program) {
 		if config.GlobalConfig.AltScreen {
 			return tea.WithAltScreen()
@@ -75,7 +79,4 @@ func withUI() {
 	if _, err := data.PROGRAM.Run(); err != nil {
 		log.Fatal(err)
 	}
-
-	// node := left.GetTreeNodes()
-	// fmt.Println(node)
 }
