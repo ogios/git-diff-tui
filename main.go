@@ -67,7 +67,7 @@ func withUI() {
 	// v.ViewFile("README.md")
 	// fmt.Println(v.View())
 	// p := udiffview.NewDiffViewModel([2]int{154, 37}).(*udiffview.DiffViewModel)
-	// p.ViewFile("README.md")
+	// p.ViewFile("ui/src/u-home/layout2.go")
 	// fmt.Println(p.View())
 
 	data.PROGRAM = tea.NewProgram(uhome.NewHomeModel(), func() func(p *tea.Program) {
@@ -75,7 +75,7 @@ func withUI() {
 			return tea.WithAltScreen()
 		}
 		return func(p *tea.Program) {}
-	}())
+	}(), tea.WithMouseAllMotion())
 	if _, err := data.PROGRAM.Run(); err != nil {
 		log.Fatal(err)
 	}

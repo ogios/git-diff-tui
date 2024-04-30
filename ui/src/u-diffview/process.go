@@ -67,12 +67,14 @@ func highlightCodes(dc *diffcontext.DiffConstractor, code1, code2 []byte, p1, p2
 		return err
 	}
 	linesC1 := strings.Split(c1, "\n")
+	// linesC1 := strings.Split(string(code1), "\n")
 
 	c2, err := highlight(string(code2), p2)
 	if err != nil {
 		return err
 	}
 	linesC2 := strings.Split(c2, "\n")
+	// linesC2 := strings.Split(string(code2), "\n")
 	i1 := 0
 	i2 := 0
 	for _, dl := range dc.Lines {

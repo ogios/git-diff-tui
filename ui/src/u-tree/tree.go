@@ -154,9 +154,13 @@ func (t *Tree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
 			cmds = append(cmds, t.prevLine(1))
 		case "h":
-			t.CurrentViewIndex[0] = max(t.CurrentViewIndex[0]-1, 0)
+			t.prevCol(1)
 		case "l":
-			t.CurrentViewIndex[0]++
+			t.nextCol(1)
+		case "H":
+			t.prevCol(1)
+		case "L":
+			t.nextCol(1)
 		case "ctrl+d":
 			cmds = append(cmds, t.nextLine(10))
 		case "ctrl+u":
@@ -170,6 +174,26 @@ func (t *Tree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "c":
 			cmds = append(cmds, t.copyFiles())
 		}
+	case tea.MouseMsg:
+		mouse := tea.MouseEvent(msg)
+		switch mouse.Button {
+		case tea.MouseButtonWheelUp:
+			if mouse.Ctrl {
+				t.prevCol(1)
+			} else {
+				cmds = append(cmds, t.prevLine(1))
+			}
+		case tea.MouseButtonWheelDown:
+			if mouse.Ctrl {
+				t.nextCol(1)
+			} else {
+				cmds = append(cmds, t.nextLine(1))
+			}
+		case tea.MouseButtonWheelLeft:
+			t.prevCol(1)
+		case tea.MouseButtonWheelRight:
+			t.nextCol(1)
+		}
 	}
 	return t, tea.Batch(cmds...)
 }
@@ -180,6 +204,14 @@ func (t *Tree) nextLine(step int) tea.Cmd {
 
 func (t *Tree) prevLine(step int) tea.Cmd {
 	return t.updateCurrentLine(max(t.CurrentLine-step, 0))
+}
+
+func (t *Tree) nextCol(step int) {
+	t.CurrentViewIndex[0] += step
+}
+
+func (t *Tree) prevCol(step int) {
+	t.CurrentViewIndex[0] = max(t.CurrentViewIndex[0]-step, 0)
 }
 
 func (t *Tree) updateCurrentLine(i int) tea.Cmd {

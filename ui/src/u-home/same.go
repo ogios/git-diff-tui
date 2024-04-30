@@ -54,10 +54,11 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		}
 	case utree.FileMsg:
 		m.CurrentFile = msg.FileRelPath
-		cmds = append(cmds, func() tea.Msg {
-			m.Text.ViewFile(m.CurrentFile)
-			return nil
-		})
+		m.Text.ViewFile(m.CurrentFile)
+		// cmds = append(cmds, func() tea.Msg {
+		// 	m.Text.ViewFile(m.CurrentFile)
+		// 	return nil
+		// })
 		toFocusModel = true
 		// m.Comment.ViewComment(m.CurrentFile)
 	case utree.CopyFileMsg:
@@ -65,6 +66,19 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		data.CopyFiles(msg.Files)
 		data.PROGRAM.RestoreTerminal()
 		return tea.Quit
+	case tea.MouseMsg:
+		if msg.Y > 1 {
+			xpos := 0
+			// NOTE: performance issue
+			for _, cm := range m.Models {
+				if xpos <= msg.X && msg.X <= cm.block[0] {
+					_, cmd := cm.m.Update(msg)
+					cmds = append(cmds, cmd)
+					break
+				}
+				xpos += cm.block[0] + 2
+			}
+		}
 	default:
 		toFocusModel = true
 	}
