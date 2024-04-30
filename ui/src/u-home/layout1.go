@@ -9,8 +9,8 @@ import (
 )
 
 type Home struct {
-	HomeCore
 	comment tea.Model
+	HomeCore
 }
 
 func newHome() *Home {
