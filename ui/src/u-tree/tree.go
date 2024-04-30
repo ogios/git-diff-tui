@@ -28,7 +28,6 @@ type Tree struct {
 	Block              [2]int
 	CurrentViewIndex   [2]int
 	CurrentLine        int
-	CurrentViewLine    int
 }
 
 type FileMsg struct {
@@ -54,7 +53,6 @@ func newTree(n *api.Node, block [2]int) *Tree {
 	t := &Tree{
 		Root:             n,
 		Lines:            lines,
-		CurrentViewLine:  0,
 		Block:            block,
 		CurrentViewIndex: [2]int{0, 0},
 	}
@@ -148,10 +146,8 @@ func (t *Tree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "j":
-			// t.CurrentLine = ((t.CurrentLine + 1) + len(t.Lines)) % len(t.Lines)
 			cmds = append(cmds, t.nextLine(1))
 		case "k":
-			// t.CurrentLine = ((t.CurrentLine - 1) + len(t.Lines)) % len(t.Lines)
 			cmds = append(cmds, t.prevLine(1))
 		case "h":
 			t.prevCol(1)
@@ -193,6 +189,9 @@ func (t *Tree) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.prevCol(1)
 		case tea.MouseButtonWheelRight:
 			t.nextCol(1)
+		case tea.MouseButtonLeft:
+			cmds = append(cmds, t.updateCurrentLine(t.CurrentViewIndex[1]+mouse.Y))
+
 		}
 	}
 	return t, tea.Batch(cmds...)
@@ -216,6 +215,7 @@ func (t *Tree) prevCol(step int) {
 
 func (t *Tree) updateCurrentLine(i int) tea.Cmd {
 	if t.CurrentLine != i {
+		i = min(max(i, 0), len(t.Lines)-1)
 		t.CurrentLine = i
 		t.updateViewIndexY()
 		return t.updateFileMsg()

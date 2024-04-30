@@ -1,6 +1,8 @@
 package uhome
 
 import (
+	"log"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ogios/merge-repo/data"
@@ -68,16 +70,23 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		return tea.Quit
 	case tea.MouseMsg:
 		if msg.Y > 1 {
-			xpos := 0
+			// log.Println("received mouse msg", msg.X)
+			xpos := -1
 			// NOTE: performance issue
 			for _, cm := range m.Models {
-				if xpos <= msg.X && msg.X <= cm.block[0] {
+				// log.Println("model1")
+				if xpos <= msg.X && msg.X <= xpos+cm.block[0]+2 {
+					log.Println("execute mouse: ", xpos)
+					msg.X -= xpos
+					msg.Y -= 2
 					_, cmd := cm.m.Update(msg)
 					cmds = append(cmds, cmd)
 					break
 				}
 				xpos += cm.block[0] + 2
+				// log.Println("next to: ", xpos, "block:", cm.block)
 			}
+			// log.Println("done mouse msg")
 		}
 	default:
 		toFocusModel = true

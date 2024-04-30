@@ -65,6 +65,30 @@ func (v *DiffViewModel) Init() tea.Cmd {
 
 func (v *DiffViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		mouse := tea.MouseEvent(msg)
+		cv := v.v.(*cropviewport.CropViewportModel)
+		switch mouse.Button {
+		case tea.MouseButtonWheelUp:
+			if mouse.Ctrl {
+				cv.PrevCol(1)
+			} else {
+				cv.PrevLine(1)
+			}
+		case tea.MouseButtonWheelDown:
+			if mouse.Ctrl {
+				cv.NextCol(1)
+			} else {
+				cv.NextLine(1)
+			}
+		case tea.MouseButtonWheelLeft:
+			cv.PrevCol(1)
+		case tea.MouseButtonWheelRight:
+			cv.NextCol(1)
+		}
+		return v, nil
+	}
 	vp, cmd := v.v.Update(msg)
 	v.v = vp
 	// cmds = append(cmds, viewport.Sync(v.v), cmd)
