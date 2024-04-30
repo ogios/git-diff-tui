@@ -28,13 +28,10 @@ func resetStyle() {
 		BorderForeground(lipgloss.Color("#ff5b00"))
 }
 
-// type keyMap map[string]func(msg tea.Msg) tea.Cmd
-
 type HomeCore struct {
-	Tree            tea.Model
 	Text            *uview.ViewModel
 	CurrentFile     string
-	Models          []tea.Model
+	Models          []*childModel
 	FocusModelIndex int
 }
 
@@ -72,7 +69,7 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		toFocusModel = true
 	}
 	if toFocusModel {
-		_, cmd := m.Models[m.FocusModelIndex].Update(msg)
+		_, cmd := m.Models[m.FocusModelIndex].m.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 	return tea.Batch(cmds...)
@@ -83,11 +80,13 @@ func view(m *HomeCore) string {
 
 	ms := make([]string, len(m.Models))
 	for i, m2 := range m.Models {
+		blockStyle := m2.style.Copy()
 		if m.FocusModelIndex == i {
-			ms[i] = focusStyle.Render(m2.View())
+			blockStyle = blockStyle.Inherit(focusStyle)
 		} else {
-			ms[i] = unfocusStyle.Render(m2.View())
+			blockStyle = blockStyle.Inherit(unfocusStyle)
 		}
+		ms[i] = blockStyle.Render(m2.m.View())
 	}
 	v = lipgloss.JoinVertical(lipgloss.Left,
 		m.CurrentFile,
@@ -95,7 +94,6 @@ func view(m *HomeCore) string {
 			ms...,
 		),
 	)
-	// return homeStyle.Render(v)
 	return v
 }
 

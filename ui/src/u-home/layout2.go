@@ -21,28 +21,21 @@ func newHomeDiff() *HomeDiff {
 	modelsHeight := h - 1
 	modelsWidth := w - 2*modelCount
 	getModelWidth := modelWidthCounter(modelCount, modelsWidth)
-	ms := []tea.Model{
-		utree.NewTreeModel(comp.TREE_NODE, [2]int{
-			getModelWidth(0.2),
-			modelsHeight,
-		}),
-		uview.NewViewModel([2]int{
-			getModelWidth(0.4),
-			modelsHeight,
-		}),
-		udiffview.NewDiffViewModel([2]int{
-			getModelWidth(0.4),
-			modelsHeight,
-		}),
+	ms := []*childModel{
+		newChild([2]int{getModelWidth(0.2), modelsHeight}),
+		newChild([2]int{getModelWidth(0.4), modelsHeight}),
+		newChild([2]int{getModelWidth(0.4), modelsHeight}),
 	}
+	ms[0].m = utree.NewTreeModel(comp.TREE_NODE, ms[0].block)
+	ms[1].m = uview.NewViewModel(ms[1].block)
+	ms[2].m = udiffview.NewDiffViewModel(ms[2].block)
 
 	home := &HomeDiff{
 		HomeCore: HomeCore{
 			Models: ms,
-			Tree:   ms[0],
-			Text:   ms[1].(*uview.ViewModel),
+			Text:   ms[1].m.(*uview.ViewModel),
 		},
-		DiffView: ms[2].(*udiffview.DiffViewModel),
+		DiffView: ms[2].m.(*udiffview.DiffViewModel),
 	}
 
 	return home
@@ -51,7 +44,7 @@ func newHomeDiff() *HomeDiff {
 func (m *HomeDiff) Init() tea.Cmd {
 	cmds := make([]tea.Cmd, 0)
 	for _, m2 := range m.Models {
-		cmds = append(cmds, m2.Init())
+		cmds = append(cmds, m2.m.Init())
 	}
 	return tea.Batch(cmds...)
 }
