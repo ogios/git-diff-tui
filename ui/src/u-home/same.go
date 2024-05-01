@@ -1,7 +1,7 @@
 package uhome
 
 import (
-	"log"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -70,13 +70,10 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		return tea.Quit
 	case tea.MouseMsg:
 		if msg.Y > 1 {
-			// log.Println("received mouse msg", msg.X)
 			xpos := -1
 			// NOTE: performance issue
 			for _, cm := range m.Models {
-				// log.Println("model1")
 				if xpos <= msg.X && msg.X <= xpos+cm.block[0]+2 {
-					log.Println("execute mouse: ", xpos)
 					msg.X -= xpos
 					msg.Y -= 2
 					_, cmd := cm.m.Update(msg)
@@ -84,9 +81,7 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 					break
 				}
 				xpos += cm.block[0] + 2
-				// log.Println("next to: ", xpos, "block:", cm.block)
 			}
-			// log.Println("done mouse msg")
 		}
 	default:
 		toFocusModel = true
@@ -99,19 +94,26 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 }
 
 func view(m *HomeCore) string {
-	var v string
+	tasks := sync.WaitGroup{}
+	tasks.Add(len(m.Models))
 
 	ms := make([]string, len(m.Models))
 	for i, m2 := range m.Models {
-		blockStyle := m2.style.Copy()
-		if m.FocusModelIndex == i {
-			blockStyle = blockStyle.Inherit(focusStyle)
-		} else {
-			blockStyle = blockStyle.Inherit(unfocusStyle)
-		}
-		ms[i] = blockStyle.Render(m2.m.View())
+		go func(i int, m2 *childModel) {
+			defer func() {
+				tasks.Done()
+			}()
+			blockStyle := m2.style.Copy()
+			if m.FocusModelIndex == i {
+				blockStyle = blockStyle.Inherit(focusStyle)
+			} else {
+				blockStyle = blockStyle.Inherit(unfocusStyle)
+			}
+			ms[i] = blockStyle.Render(m2.m.View())
+		}(i, m2)
 	}
-	v = lipgloss.JoinVertical(lipgloss.Left,
+	tasks.Wait()
+	v := lipgloss.JoinVertical(lipgloss.Left,
 		m.CurrentFile,
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			ms...,
