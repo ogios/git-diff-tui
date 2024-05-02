@@ -1,8 +1,6 @@
 package udiffview
 
 import (
-	"log"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ogios/cropviewport"
@@ -13,6 +11,7 @@ import (
 type DiffViewModel struct {
 	cache *api.ContentCacher[*DiffContentData]
 	v     tea.Model
+	path  string
 }
 type DiffContentData comp.ContentData
 
@@ -50,13 +49,20 @@ func NewDiffViewModel(block [2]int) tea.Model {
 	return view
 }
 
-func (v *DiffViewModel) ViewFile(p string) {
-	log.Println("diffing file", p)
-	content := v.cache.Get(p)
-	cv := v.v.(*cropviewport.CropViewportModel)
-	cv.SetContentGivenData(content.Table, content.Lines)
-	cv.BackToTop()
-	cv.BackToLeft()
+func (v *DiffViewModel) SetFile(p string) tea.Cmd {
+	// log.Println("diffing file", p)
+	v.path = p
+	return func() tea.Msg {
+		content := v.cache.Get(p)
+		cv := v.v.(*cropviewport.CropViewportModel)
+		if v.path != p {
+			return nil
+		}
+		cv.SetContentGivenData(content.Table, content.Lines)
+		cv.BackToTop()
+		cv.BackToLeft()
+		return 1
+	}
 }
 
 func (v *DiffViewModel) Init() tea.Cmd {

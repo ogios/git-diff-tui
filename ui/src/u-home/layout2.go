@@ -53,11 +53,7 @@ func (m *HomeDiff) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0)
 	switch msg := msg.(type) {
 	case utree.FileMsg:
-		m.DiffView.ViewFile(msg.FileRelPath)
-		// cmds = append(cmds, func() tea.Msg {
-		// 	m.DiffView.ViewFile(msg.FileRelPath)
-		// 	return nil
-		// })
+		cmds = append(cmds, m.DiffView.SetFile(msg.FileRelPath))
 	}
 	cmds = append(cmds, update(msg, &m.HomeCore))
 	return m, tea.Batch(cmds...)

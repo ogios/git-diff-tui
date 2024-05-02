@@ -56,14 +56,6 @@ func NewViewModel(block [2]int) tea.Model {
 	return view
 }
 
-func (v *ViewModel) ViewFile(p string) {
-	content := v.cache.Get(p)
-	cv := v.v.(*cropviewport.CropViewportModel)
-	cv.SetContentGivenData(content.Table, content.Lines)
-	cv.BackToTop()
-	cv.BackToLeft()
-}
-
 func (v *ViewModel) SetFile(p string) tea.Cmd {
 	v.path = p
 	return func() tea.Msg {
