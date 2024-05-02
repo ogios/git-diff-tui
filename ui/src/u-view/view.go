@@ -17,6 +17,7 @@ import (
 type ViewModel struct {
 	cache *api.ContentCacher[*comp.ContentData]
 	v     tea.Model
+	path  string
 }
 
 var viewBlockStyle lipgloss.Style
@@ -61,6 +62,21 @@ func (v *ViewModel) ViewFile(p string) {
 	cv.SetContentGivenData(content.Table, content.Lines)
 	cv.BackToTop()
 	cv.BackToLeft()
+}
+
+func (v *ViewModel) SetFile(p string) tea.Cmd {
+	v.path = p
+	return func() tea.Msg {
+		content := v.cache.Get(p)
+		cv := v.v.(*cropviewport.CropViewportModel)
+		if v.path != p {
+			return nil
+		}
+		cv.SetContentGivenData(content.Table, content.Lines)
+		cv.BackToTop()
+		cv.BackToLeft()
+		return 1
+	}
 }
 
 func (v *ViewModel) Init() tea.Cmd {

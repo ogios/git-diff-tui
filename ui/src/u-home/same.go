@@ -56,13 +56,9 @@ func update(msg tea.Msg, m *HomeCore) tea.Cmd {
 		}
 	case utree.FileMsg:
 		m.CurrentFile = msg.FileRelPath
-		m.Text.ViewFile(m.CurrentFile)
-		// cmds = append(cmds, func() tea.Msg {
-		// 	m.Text.ViewFile(m.CurrentFile)
-		// 	return nil
-		// })
+		// m.Text.ViewFile(m.CurrentFile)
+		cmds = append(cmds, m.Text.SetFile(m.CurrentFile))
 		toFocusModel = true
-		// m.Comment.ViewComment(m.CurrentFile)
 	case utree.CopyFileMsg:
 		data.PROGRAM.ReleaseTerminal()
 		data.CopyFiles(msg.Files)
