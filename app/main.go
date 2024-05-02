@@ -3,14 +3,12 @@ package app
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ogios/merge-repo/api"
 	"github.com/ogios/merge-repo/config"
 	"github.com/ogios/merge-repo/data"
-	"github.com/ogios/merge-repo/template"
 	_ "github.com/ogios/merge-repo/ui/comp"
 	uhome "github.com/ogios/merge-repo/ui/src/u-home"
 )
@@ -20,9 +18,6 @@ func RunApp() {
 	defer data.Exit()
 	start := time.Now().UnixMilli()
 
-	// html
-	GenDiffHTML()
-
 	fmt.Printf("cost: %dms\n", time.Now().UnixMilli()-start)
 
 	// ui
@@ -31,24 +26,6 @@ func RunApp() {
 	} else {
 		noUI()
 	}
-}
-
-// 生成diff表格
-func GenDiffHTML() {
-	ls := make([][]string, len(data.DIFF_FILES))
-	n := 0
-	for fn := range data.DIFF_FILES {
-		s, err := data.GetDiffFileComment(fn)
-		if err != nil {
-			panic(err)
-		}
-		ls[n] = []string{
-			fn,
-			strings.Join(s, "\n"),
-		}
-		n++
-	}
-	template.GenTemplate(ls)
 }
 
 // 纯复制文件
